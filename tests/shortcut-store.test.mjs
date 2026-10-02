@@ -45,3 +45,8 @@ test('preferences default off, persist across recreation, reject non-booleans an
   f.fail(); await assert.rejects(store.setPreferences({frequentSitesEnabled:true,autoOpenEnabled:false}));
   assert.deepEqual(await store.getPreferences(),{frequentSitesEnabled:false,autoOpenEnabled:false});
 });
+
+test('bare domains with ports normalize to HTTPS while script schemes remain rejected',()=>{
+  assert.deepEqual(normalizeShortcutEdit({title:'Local',url:'example.com:8443/path'}),{title:'Local',url:'https://example.com:8443/path'});
+  assert.throws(()=>normalizeShortcutEdit({title:'Unsafe',url:'javascript:123'}));
+});

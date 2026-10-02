@@ -18,7 +18,7 @@ export function createAutoOpen(api, { ensureOffscreen, getPreferences, notify = 
       for (const [id, request] of pending) if (request.tabId === info.tabId) pending.delete(id);
     }
   }
-  const current = request => request.epoch === epoch && latest.get(request.windowId) === request.sequence;
+  const current = request => !suppressed.has(request.tabId) && request.epoch === epoch && latest.get(request.windowId) === request.sequence;
   function handleMessage(message, sender, respond) {
     if (message?.type !== 'auto:gesture' || sender.id !== api.runtime.id || sender.url !== api.runtime.getURL('offscreen.html')) return false;
     const request = pending.get(message.requestId);

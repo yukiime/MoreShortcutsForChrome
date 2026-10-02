@@ -19,4 +19,4 @@ for (const name of await readdir('extension')) {
   const result = spawnSync(process.execPath, ['--check', `extension/${name}`], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
 }
-console.log(`Static checks passed: MV3, 3 permissions, ${entries.length} valid shortcuts, all manifest resources present, JS syntax clean.`);
+console.log(`Static checks passed: MV3, 3 required permissions + optional history, ${entries.length} valid shortcuts, all manifest resources present, JS syntax clean.`);

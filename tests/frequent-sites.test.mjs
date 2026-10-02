@@ -27,13 +27,16 @@ test('history scan splits bounded windows, deduplicates URLs and does not pagina
   const calls=[];
   const api={history:{search:async q=>{
     calls.push(q);
-    if(q.startTime===0 && q.endTime===100) return [{id:'1',url:'https://a.test/',visitCount:5,lastVisitTime:200},{id:'2',url:'https://b.test/',visitCount:4,lastVisitTime:200}];
-    if(q.endTime===50) return [{id:'1',url:'https://a.test/',visitCount:5,lastVisitTime:200}];
-    return [{id:'1',url:'https://a.test/',visitCount:5,lastVisitTime:200},{id:'3',url:'https://c.test/',visitCount:3}].slice(0,1);
+    const a={id:'1',url:'https://a.test/',visitCount:5,lastVisitTime:200};
+    const b={id:'2',url:'https://b.test/',visitCount:4,lastVisitTime:200};
+    const c={id:'3',url:'https://c.test/',visitCount:3,lastVisitTime:200};
+    if(q.startTime===0 && q.endTime===100) return [a,b,c];
+    if(q.endTime===50) return [a,b];
+    return [a,c];
   }}};
-  const result=await scanHistory(api,{endTime:100,maxResults:2});
-  assert.equal(result.length,1); assert.equal(result[0].visitCount,5);
-  assert.deepEqual(calls.map(q=>[q.text,q.startTime,q.endTime,q.maxResults]),[['',0,100,2],['',0,50,2],['',50,100,2]]);
+  const result=await scanHistory(api,{endTime:100,maxResults:3});
+  assert.equal(result.length,3); assert.equal(result[0].visitCount,5);
+  assert.deepEqual(calls.map(q=>[q.text,q.startTime,q.endTime,q.maxResults]),[['',0,100,3],['',0,50,3],['',50,100,3]]);
 });
 test('history scan rejects saturated timestamps, exhausted budgets, cancelled scans and API failures',async()=>{
   const {scanHistory}=await import('../extension/frequent-sites.js');

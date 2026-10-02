@@ -32,3 +32,10 @@ test('debugger failures detach and user closing suppresses further automatic reo
   const f=await fixture();f.api.debugger.sendCommand=async()=>{throw Error('cancelled');};await f.bridge.request(7);assert.equal(f.effects.at(-1)[0],'detach');
   f.bridge.closed({tabId:7});f.effects.length=0;await f.bridge.request(7);assert.equal(f.effects.length,0);
 });
+
+test('manual close while the hidden document is being created cancels the pending automatic open',async()=>{
+  const {createAutoOpen}=await import('../extension/auto-open.js');const f=await fixture();let finish,started;const began=new Promise(r=>started=r);
+  const bridge=createAutoOpen(f.api,{ensureOffscreen:()=>{started();return new Promise(r=>finish=r);},getPreferences:async()=>({autoOpenEnabled:true})});
+  const pending=bridge.request(7);await began;bridge.closed({tabId:7});finish();await pending;
+  assert.equal(f.effects.some(e=>e[0]==='attach'||e[0]==='open'),false);
+});

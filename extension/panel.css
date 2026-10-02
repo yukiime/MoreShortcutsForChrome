@@ -38,3 +38,8 @@ button.frequent-site { display: flex; justify-content: space-between; gap: 8px; 
   button:not(.shortcut) { background: #303134; }
   .hint, .visit-count { color: #bdc1c6; }
 }
+
+.site-glyph { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(128,128,128,.15); flex: none; font-weight: 600; }
+.site-host { flex: 1; align-self: center; min-width: 0; }
+.visit-count { align-self: center; }
+#expand-frequent { margin-top: 8px; }

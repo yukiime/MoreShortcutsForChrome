@@ -55,7 +55,8 @@ export function normalizeShortcutEdit({ title, url } = {}) {
   if (typeof url !== 'string' || !url.trim()) throw new Error('请输入 HTTP/HTTPS 网址。');
   const raw = url.trim();
   // An explicit scheme is never rewritten into an HTTPS hostname.
-  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+  const hostWithPort = /^(?:localhost|(?:[a-z0-9-]+\.)+[a-z0-9-]+|\[[0-9a-f:]+\]):\d+(?:[/?#]|$)/i.test(raw);
+  const candidate = !hostWithPort && /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
   let parsed;
   try { parsed = new URL(candidate); } catch { throw new Error('网址格式无效。'); }
   if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || !parsed.hostname) {

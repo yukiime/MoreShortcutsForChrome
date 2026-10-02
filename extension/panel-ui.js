@@ -18,6 +18,7 @@ export function mountPanel(document, api, location) {
     draft = null; $('editor').hidden = true; $('refresh-version').hidden = true; $('status').hidden = true;
   }
   function edit(entry) {
+    if (saving) return;
     if (draft?.dirty) { showError('请先保存或取消当前草稿。'); return; }
     draft = { id: entry.id, revision: data.revision, dirty: false };
     $('edit-title').value = entry.title; $('edit-url').value = entry.url;
@@ -70,13 +71,13 @@ export function mountPanel(document, api, location) {
   document.addEventListener('keydown', event => { if (event.key === 'Escape') cancel(); });
   $('editor').addEventListener('submit', async event => {
     event.preventDefault(); if (!draft || saving) return;
-    saving = true; $('save-edit').disabled = true; $('cancel-edit').disabled = true; $('refresh-version').disabled = true;
+    saving = true; $('edit-title').disabled = true; $('edit-url').disabled = true; $('save-edit').disabled = true; $('cancel-edit').disabled = true; $('refresh-version').disabled = true;
     try {
       const result = await send({ type: 'shortcuts:edit', id: draft.id, title: $('edit-title').value, url: $('edit-url').value, revision: draft.revision });
       if (result.revision >= data.revision) data = result;
       saving = false; cancel(); render();
     } catch (error) { showError(error.message); $('refresh-version').hidden = false; }
-    finally { saving = false; $('save-edit').disabled = false; $('cancel-edit').disabled = false; $('refresh-version').disabled = false; }
+    finally { saving = false; $('edit-title').disabled = false; $('edit-url').disabled = false; $('save-edit').disabled = false; $('cancel-edit').disabled = false; $('refresh-version').disabled = false; }
   });
   $('refresh-version').addEventListener('click', async () => {
     try {
@@ -89,13 +90,13 @@ export function mountPanel(document, api, location) {
     frequentVersion++; frequentToken = null; $('frequent-list').replaceChildren();
   }
   function collapse() {
-    clearFrequent(); $('frequent-section').hidden = true;
+    clearFrequent(); $('frequent-section').hidden = true; $('expand-frequent').hidden = !preferences.frequentSitesEnabled;
     send({ type: 'frequent:clear' }).catch(() => {});
   }
   async function loadFrequent() {
     if (!preferences.frequentSitesEnabled) return;
     clearFrequent(); const version = frequentVersion;
-    $('frequent-section').hidden = false; $('frequent-status').textContent = '正在计算…'; $('grant-history').hidden = true;
+    $('frequent-section').hidden = false; $('expand-frequent').hidden = true; $('frequent-status').textContent = '正在计算…'; $('grant-history').hidden = true;
     try {
       const permitted = await api.permissions.contains({ permissions: ['history'] });
       if (version !== frequentVersion) return;
@@ -109,9 +110,10 @@ export function mountPanel(document, api, location) {
       const fragment = document.createDocumentFragment();
       for (const site of result.sites) {
         const button = document.createElement('button'); button.type = 'button'; button.className = 'frequent-site'; button.title = site.url;
-        const label = document.createElement('span'); label.textContent = site.title;
+        const glyph = document.createElement('span'); glyph.className = 'site-glyph'; glyph.textContent = site.title.slice(0, 1).toUpperCase(); glyph.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span'); label.className = 'site-host'; label.textContent = site.title;
         const count = document.createElement('span'); count.className = 'visit-count'; count.textContent = `${site.visitCount} 次`;
-        button.append(label, count);
+        button.append(glyph, label, count);
         const token = result.token;
         const activate = event => {
           event.preventDefault();
@@ -147,6 +149,7 @@ export function mountPanel(document, api, location) {
     finally { $('frequent-enabled').disabled = false; }
   });
   $('collapse-frequent').addEventListener('click', collapse);
+  $('expand-frequent').addEventListener('click', loadFrequent);
   $('refresh-frequent').addEventListener('click', loadFrequent);
   $('grant-history').addEventListener('click', () => {
     // The permission request must run directly in the actual button callback.
@@ -163,7 +166,9 @@ export function mountPanel(document, api, location) {
     catch (error) { $('auto-enabled').checked = preferences.autoOpenEnabled; $('auto-status').textContent = error.message; }
     finally { $('auto-enabled').disabled = false; }
   });
-  const resume = () => { if (document.visibilityState === 'visible') loadPreferences().catch(error => showError(error.message)); };
+  const resume = () => { if (document.visibilityState === 'visible') Promise.all([loadShortcuts(), loadPreferences()]).then(() => {
+    if (!draft) $('status').hidden = true;
+  }).catch(error => showError(error.message)); };
   document.addEventListener('visibilitychange', resume);
   api.runtime.onMessage.addListener((message, sender) => {
     if (sender.id !== api.runtime.id) return;

@@ -10,6 +10,8 @@
 
 **Spec:** [用户已确认的设计](../../sidepanel-editing-and-frequent-sites-proposal.md)
 
+2026-10-03 研究补充：入口候选见 [自动显示与 Command+T 核查](../../sidepanel-auto-open-research-2026-10-03.md)。此计划仍只覆盖已批准的编辑与常访问功能，不把两个未实测入口列为完成项；实施前应先验证选定入口。下面补齐活动 NTP 上下文验证与历史查询性能要求。
+
 ## Global Constraints
 
 - 范围只限方案 1；方案 3 仅保留历史代码。
@@ -39,6 +41,7 @@
 - `createShortcutStore(api, defaults) -> {read(), edit({id,title,url,revision})}`；read 返回 `{revision,shortcuts}`，edit 串行校验、持久保存后返回同结构。storage.local 键 `shortcutDocument`，内部数据为 `{version:1,revision,shortcuts}`。
 - `createController(api,shortcuts,record,readShortcuts=async()=>shortcuts)`：新增可选清单读取函数，在导航队列内读取最新项，保持旧接口测试兼容；worker 新增 `shortcuts:get`、`shortcuts:edit` 消息，均校验 sender.id 与 panelContext。
 - worker `preferences:get`、`preferences:set` 返回 `{frequentSitesEnabled}`；storage.local 独立键 `panelPreferences:{version:1,frequentSitesEnabled:false}`。只持久保存校验过的布尔设置，写失败保持原状态。
+- 清单、偏好、历史请求共享 sender.id、panelContext、活动 NTP、windowId 与 pendingUrl 校验；panelContext 的参数解析不代替活性核对。worker 是唯一写入者，所有 storage.local 清单与偏好保存串行执行。
 
 - [ ] 写失败测试：`normalizes bare domain and rejects explicit unsafe schemes` 断言 example.com 变为 https://example.com/，javascript/file/账号密码/空标题被拒绝。
 - [ ] 写失败测试：`edits persist across store recreation` 断言修改 id 保持、顺序与图标不变，新 store 读回修改；`storage failure preserves previous document` 断言拒绝后 read 仍是旧值；`stale revision cannot overwrite a concurrent edit` 断言只有第一个同版本编辑成功。
@@ -61,7 +64,8 @@
 - [ ] 写失败测试：重复 HTTP/HTTPS URL 与不同路径合并访问次数，子域分开，23 个主机截为 20，3 个主机不补齐，次数相同按时间与主机名稳定排序。
 - [ ] 写失败测试：开关关闭或无历史权限时不查询历史；读取失败返回错误；关闭开关/撤销权限/删除历史使在途请求和导航 token 失效。
 - [ ] 运行 `node --test tests/frequent-sites.test.mjs tests/worker.test.mjs`，确认新行为缺失导致失败。
-- [ ] 实现排名和后台查询：history.search 显式 `text:''`、`startTime:0`、`maxResults:2147483647`，结果达到上限时返回不完整错误。列表缓存仅在内存，worker 重启后旧 token 失效。关闭开关/权限撤销/历史删除递增请求版本、清空缓存并通知 panel 清空。
+- [ ] 实现排名和后台查询：history.search 显式 `text:''`，最早窗口从 `startTime:0` 开始，固定查询截止时间与有界 maxResults；触上限时拆分时间窗，按 URL/id 全局去重后只累计一次 visitCount。窗口不能继续分割、扫描预算不足或查询失败时返回不完整错误，不呈现截断榜单。不要按返回 lastVisitTime 直接递减分页。列表缓存仅在内存，worker 重启后旧 token 失效。关闭开关/权限撤销/历史删除递增请求版本、清空缓存并通知 panel 清空。
+- [ ] 查询回归应覆盖大历史量、同一 URL 落入多个时间窗、边界相同时间戳、返回 lastVisitTime 晚于查询 endTime、不可完整扫描等情况；完整失败须与历史不足 20 网站分开显示。
 - [ ] 复用 controller 的上下文与 NTP 校验后导航常访问项，禁止消息传入任意 URL；读取历史前后再次核对权限与请求版本。
 - [ ] 运行 `npm test && npm run check`；包含旧目标失活、移窗、pendingUrl、窗口隔离、token 错误的导航测试。
 - [ ] 以本地用户提交：`feat: add permission-aware frequent sites data`。
@@ -87,3 +91,7 @@
 - 每项的失败回归先运行，再实现，最后执行整个方案 1 测试与静态检查。
 - 最终独立代码审查按执行技能要求进行；实际浏览器行为与自动测试分别报告。
 - 执行方式待用户选择：建议本会话直接实施，三个任务共享后台与 UI 接口。可选择原目录或隔离工作树，不默认创建额外工作树。
+
+## 2026-10-03 执行结果
+
+三个功能任务已实现，本地提交按后台与界面分组保存。新增工具栏/Command+T 入口已浏览器实测；原生自动显示使用独立实验构建，未接受新权限，也未运行验收。独立审查的三项 P2 与收起后可达性问题均补失败回归后修复。最终结果、决定及浏览器未测项见 [本轮验收记录](../../sidepanel-improvements-validation-2026-10-03.md)。上方原始任务清单保留为计划历史，不以统一勾选替代逐项证据。

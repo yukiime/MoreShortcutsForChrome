@@ -49,3 +49,23 @@ test('external setting changes sync and query failures are shown as failures',as
   f.local.emit({panelPreferences:{newValue:{version:1,frequentSitesEnabled:true}}},'local');await flush();
   assert.equal(f.nodes.get('frequent-enabled').checked,true);assert.match(f.nodes.get('frequent-status').textContent,/incomplete scan/);
 });
+
+test('resuming an inactive panel refreshes shortcut labels after its storage read was rejected',async()=>{
+  const f=await setup();const original=f.api.runtime.sendMessage;let inactive=true;
+  f.api.runtime.sendMessage=msg=>msg.type==='shortcuts:get'&&inactive?Promise.resolve({ok:false,error:'inactive'}):original(msg);
+  f.data.revision=1;f.data.shortcuts[0].title='Remote edit';
+  f.local.emit({shortcutDocument:{newValue:{version:1,...f.data}}},'local');await flush();assert.match(firstShortcut(f).title,/One/);
+  inactive=false;f.doc.dispatch('visibilitychange');await flush();assert.match(firstShortcut(f).title,/Remote edit/);
+});
+test('saving locks text inputs and prevents switching to a different edit draft until completion',async()=>{
+  const f=await setup();click(f,'edit-mode');firstShortcut(f).dispatch('click');const original=f.api.runtime.sendMessage;let finish;
+  f.api.runtime.sendMessage=msg=>msg.type==='shortcuts:edit'?new Promise(r=>finish=r):original(msg);
+  f.nodes.get('editor').dispatch('submit');
+  assert.equal(f.nodes.get('edit-title').disabled,true);assert.equal(f.nodes.get('edit-url').disabled,true);
+  finish({ok:true,...f.data});await flush();assert.equal(f.nodes.get('edit-title').disabled,false);
+});
+test('temporary collapse can be reopened without toggling the persisted setting',async()=>{
+  const f=await setup();f.allow();f.nodes.get('frequent-enabled').checked=true;f.nodes.get('frequent-enabled').dispatch('change');await flush();
+  click(f,'collapse-frequent');await flush();assert.equal(f.nodes.get('expand-frequent')?.hidden,false);
+  click(f,'expand-frequent');await flush();assert.equal(f.nodes.get('frequent-section').hidden,false);assert.equal(f.calls.filter(c=>c.type==='preferences:set').length,1);
+});
