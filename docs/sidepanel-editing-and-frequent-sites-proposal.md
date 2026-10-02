@@ -1,0 +1,49 @@
+# 侧栏编辑与常访问子菜单：设计草案
+
+状态：待用户确认，尚未实现。范围只限方案 1。
+
+## 用户目标
+
+保留 Chrome 原生新标签页。侧栏只在新标签页显示，普通“+”与 Cmd+T 希望直接带出侧栏；不增加辅助程序、普通网页常驻侧栏或扩展控制标签页。自动显示仍有接口障碍，不能把新增菜单验收当成解决该问题。
+
+已有快捷方式可直接在侧栏修改名称和 URL。侧栏提供“常访问”二级菜单，展示按访问频率排列的最多 20 个网站。所有界面操作发生在侧栏内。
+
+## 推荐界面与保存方式
+
+保留现有 40 项网格。顶部提供“编辑”和“常访问”按钮。“编辑”开启后，点某项即在侧栏内显示名称、URL、保存和取消。编辑期间不触发导航。Esc 或取消保留原数据；保存失败保留输入并显示原因，成功才更新网格。
+
+URL 仅允许 HTTP/HTTPS，拒绝脚本 URL、账号密码和空标题。支持省略协议的域名输入，规范化为 HTTPS 后再校验。保留现有条目 id、顺序和图标。
+
+初始数据从 shortcuts.json 读取；用户改动写入 chrome.storage.local，重载扩展或重启 Chrome 后保留。修改数据不回写源码，因此个人网址不会混入 Git 提交。后台串行保存并校验版本；另一个侧栏已修改时，拒绝覆盖较新数据，保留草稿并提示刷新。其他已打开侧栏同步更新。
+
+## 常访问的来源与二级菜单
+
+选择“常访问”后，在侧栏内进入子菜单，顶部提供返回和刷新。按网站主机名汇总 Chrome 当前保留历史的 visitCount，再按总次数降序列出前 20 项；次数相同时按最后访问时间排序，再按主机名确定稳定顺序。不同子域名分别计数，HTTP/HTTPS 相同主机合并。菜单说明统计依据为“浏览器保留历史中的访问次数”，不声称与 Chrome 内部推荐排名一致。
+
+每个网站显示主机名与离线文字图标，点击打开该网站根地址；优先使用历史中该网站已有的 HTTPS 根域，避免虚构访问过的协议。历史不足 20 个网站就显示实际数量，不用默认站点补齐。
+
+推荐使用 optional_permissions 中的 history。首次使用时在子菜单提供“允许读取历史”按钮，用户点击后由 Chrome 请求权限；拒绝时仍可使用自定义快捷方式。只在菜单打开或刷新时查询，不主动写入、删除或添加历史。历史结果在扩展内计算，不上传，不写文件、不写 Git、不加入诊断日志。撤销权限或删除历史后清理已显示结果和导航缓存。
+
+读取时显式设置历史搜索起点，避免默认只查询 24 小时。应查询完整可用的历史结果再排名，不截取最近 20 个 URL 当成最常访问网站；若因数据量或接口失败不能完成，显示失败，不能静默呈现不完整榜单。
+
+替代方案是 topSites API，它提供 Chrome 的推荐站点，但官方接口未保证返回 20 项，也不能指定数量；因此不作为此次满足 20 项要求的主要来源。依据：[History API](https://developer.chrome.com/docs/extensions/reference/api/history)、[Top Sites API](https://developer.chrome.com/docs/extensions/reference/api/topSites)。
+
+## 导航与实现边界
+
+两种列表的普通点击都导航该侧栏所属窗口的活动 NTP；修饰键保持现有同窗口新建标签行为。导航前复查 URL、活动状态、窗口和 pendingUrl，避免旧侧栏修改别的网页。常访问导航只接受后台生成的已验证菜单项，不把消息中任意网址作为导航目标。
+
+改动涉及 panel.html/panel.css/panel.js、worker.js、controller.js、数据纯函数与测试、manifest 的可选 history 权限、README 与检查脚本。已有 diagnostics 不作为编辑入口。方案 3 仅保留历史代码，不继续开发。
+
+## 自动显示进一步核对
+
+本轮追加检查了 Chromium 当前 tabs_event_router.cc：onCreated 与 onUpdated 明确使用 kNotEnabled 用户手势状态。SidePanelOpenFunction 在打开之前检查 user_gesture。因此把 open 调用放到 onCreated、onUpdated 或去掉异步等待，不能获得原生“+”/Cmd+T 对扩展的用户手势。
+
+共享侧栏会出现在普通网页，已被用户排除。替换原生 NTP、改用扩展专属快捷键、后台模拟点击或辅助程序不计为当前要求的实现。现阶段没有找到满足所有约束的可靠公开接口路径。此判断基于官方文档与源码，不声称已经实测新的自动显示修复。
+
+来源：[标签事件路由](https://raw.githubusercontent.com/chromium/chromium/main/chrome/browser/extensions/api/tabs/tabs_event_router.cc)、[侧栏打开实现](https://raw.githubusercontent.com/chromium/chromium/main/chrome/browser/extensions/api/side_panel/side_panel_api.cc)。
+
+## Git 与验收
+
+程序基线已在 main 建立本地 Git 记录，作者和提交者使用本地 Git 用户。方案 1 与历史 PiP 程序、测试和设计纳入；ZIP、验证日志、个人研究会话文件排除。尚未创建或发布 GitHub 仓库；正式公开前需整理 README 中本地报告链接和许可证。
+
+实施后验证保存成功与失败、无效 URL、重启持久化、多侧栏同时编辑、历史不足 20 项、重复主机汇总、排序、权限拒绝和撤销、历史删除、加载错误、旧目标导航拒绝、两窗口隔离。浏览器只启用方案 1，复测侧栏内编辑与子菜单，自动显示单独验收并保留未实现状态。

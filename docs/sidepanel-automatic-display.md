@@ -22,7 +22,9 @@
 
 要求现在固定为：保留原生 NTP、只在 NTP 显示侧栏、普通“+”/Cmd+T 无额外点击带出侧栏。目前没有基于公开扩展接口的可靠实现路径，不应以注册成功、备用快捷键、普通网页保留侧栏或控制标签页代替用户要求。
 
-若继续追求上述全部效果，可以研究 macOS 辅助程序通过辅助功能触发 Chrome 原生工具栏侧栏入口。这是额外常驻程序与系统权限的新范围，不是当前扩展的既有能力。可行性、后台观察、同标签导航、多个窗口、用户手动关闭、用户操作竞态与 Chrome 版本兼容均未验证；需要用户选择该方向后另行设计，不能宣称已能稳定实现。
+用户随后也明确拒绝 macOS 辅助程序。后续仅研究纯扩展路径，不再把系统辅助功能操作 Chrome 作为候选方案。
+
+追加源码核对确认：Chromium 的 tabs_event_router.cc 对 onCreated 与 onUpdated 明确使用 kNotEnabled 用户手势标记；SidePanelOpenFunction 会拒绝无手势调用。把 open 移到创建/更新回调或去掉 await 不解决原生“+”/Cmd+T 的自动打开。来源：[标签事件路由](https://raw.githubusercontent.com/chromium/chromium/main/chrome/browser/extensions/api/tabs/tabs_event_router.cc)、[侧栏打开实现](https://raw.githubusercontent.com/chromium/chromium/main/chrome/browser/extensions/api/side_panel/side_panel_api.cc)。现阶段尚未找到满足全部约束的可靠公开接口路径，新增功能设计见 [侧栏编辑与常访问子菜单](sidepanel-editing-and-frequent-sites-proposal.md)。
 
 ## 后续实测标准
 
