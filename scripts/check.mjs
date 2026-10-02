@@ -6,6 +6,7 @@ import { validateShortcuts } from '../extension/core.js';
 const manifest = JSON.parse(await readFile('extension/manifest.json', 'utf8'));
 assert.equal(manifest.manifest_version, 3);
 assert.deepEqual([...manifest.permissions].sort(), ['sidePanel', 'storage', 'tabs']);
+assert.deepEqual(manifest.optional_permissions, ['history']);
 assert.equal(manifest.chrome_url_overrides, undefined);
 assert.equal(manifest.content_scripts, undefined);
 assert.equal(manifest.host_permissions, undefined);

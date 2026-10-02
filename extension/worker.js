@@ -1,5 +1,7 @@
+import { openNewNtpWithPanel } from './entry.js';
 import { validateShortcuts } from './core.js';
-import { createController, disableAllPanels } from './controller.js';
+import { disableAllPanels } from './controller.js';
+import { createPanelService } from './panel-service.js';
 
 let logQueue = Promise.resolve();
 function record(event, details = {}) {
@@ -11,12 +13,15 @@ function record(event, details = {}) {
   return logQueue;
 }
 
-let controller;
+let controller, service;
+function notify(message) { chrome.runtime.sendMessage(message).catch(() => {}); }
 const ready = fetch(chrome.runtime.getURL('shortcuts.json'))
   .then(response => { if (!response.ok) throw new Error('清单读取失败'); return response.json(); })
   .then(validateShortcuts)
   .then(async shortcuts => {
-    controller = createController(chrome, shortcuts, record);
+    service = createPanelService(chrome, shortcuts, record, notify);
+    await service.store.read();
+    controller = service.controller;
     await controller.initialize();
     return controller;
   });
@@ -28,28 +33,51 @@ function run(task) {
   });
 }
 
+chrome.action.onClicked.addListener(tab => openNewNtpWithPanel(chrome, tab, error => {
+  record('entry-error', { error: error.message }).catch(() => {});
+}));
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === 'new-ntp-with-panel') openNewNtpWithPanel(chrome, tab, error => {
+    record('entry-error', { error: error.message }).catch(() => {});
+  });
+});
+
 // Register synchronously on every worker evaluation. No keepalive timer/port.
 chrome.tabs.onCreated.addListener(tab => run(c => c.syncTab(tab.id)));
 chrome.tabs.onUpdated.addListener((tabId, change) => {
+  if (change.url !== undefined) service?.invalidateTab(tabId);
   if (change.url !== undefined || change.status !== undefined) run(c => c.syncTab(tabId));
 });
-chrome.tabs.onActivated.addListener(({ tabId }) => run(c => c.syncTab(tabId)));
-chrome.tabs.onAttached.addListener(tabId => run(c => c.syncTab(tabId)));
+chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
+  service?.invalidateTab(tabId);
+  run(c => c.syncTab(tabId));
+  notify({ type: 'panel:resume', tabId, windowId });
+});
+chrome.tabs.onAttached.addListener(tabId => { service?.invalidateTab(tabId); run(c => c.syncTab(tabId)); });
 chrome.tabs.onReplaced.addListener(addedTabId => run(c => c.syncTab(addedTabId)));
-chrome.tabs.onRemoved.addListener((tabId, { windowId }) => { record('tab-removed', { tabId, windowId }).catch(() => {}); });
+chrome.tabs.onRemoved.addListener((tabId, { windowId }) => { service?.invalidateTab(tabId); record('tab-removed', { tabId, windowId }).catch(() => {}); });
 chrome.windows.onRemoved.addListener(windowId => { record('window-removed', { windowId }).catch(() => {}); });
-chrome.sidePanel.onOpened.addListener(info => run(c => c.panelOpened(info)));
-chrome.sidePanel.onClosed.addListener(info => { record('panel-closed', info).catch(() => {}); });
+chrome.sidePanel.onOpened.addListener(info => { run(c => c.panelOpened(info)); notify({ type: 'panel:resume', ...info }); });
+chrome.sidePanel.onClosed.addListener(info => { if (info.tabId !== undefined) service?.invalidateTab(info.tabId); record('panel-closed', info).catch(() => {}); });
 chrome.runtime.onInstalled.addListener(({ reason }) => { run(() => record('extension-installed', { reason })); });
 chrome.runtime.onStartup.addListener(() => { run(() => record('browser-startup')); });
+const requestTypes = new Set(['navigate', 'shortcuts:get', 'shortcuts:edit', 'preferences:get', 'preferences:set', 'frequent:get', 'frequent:clear']);
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (message?.type !== 'navigate') return false;
-  ready.then(c => c.navigate(message, sender))
+  if (!requestTypes.has(message?.type)) return false;
+  ready.then(() => service.handle(message, sender))
     .then(respond, error => {
-      record('navigation-rejected', { error: error.message }).catch(() => {});
+      // History failures can include private URLs in API error text. Never log them.
       respond({ ok: false, error: error.message });
     });
   return true;
+});
+chrome.permissions.onRemoved.addListener(info => {
+  if (info.permissions.includes('history')) service?.invalidateHistory();
+});
+chrome.history?.onVisitRemoved.addListener(() => service?.invalidateHistory());
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.panelPreferences?.newValue?.frequentSitesEnabled !== undefined &&
+      !changes.panelPreferences.newValue.frequentSitesEnabled) service?.invalidateHistory();
 });
 ready.catch(error => {
   console.error('[NTP shortcuts startup]', error);

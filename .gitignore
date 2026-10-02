@@ -12,3 +12,6 @@ docs/progress.md
 **/docs/progress.md
 chrome-native-ntp-feasibility.md
 sidepanel-validation-session-prompt.md
+
+.superpowers/
+build/

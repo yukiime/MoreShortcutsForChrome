@@ -36,7 +36,7 @@ test('fresh worker rebuilds NTP eligibility with global panel disabled and no au
   assert.equal(f.options.get(7)?.enabled, true);
   assert.equal(f.options.get(8)?.enabled, false);
   assert.match(f.options.get(7).path, /tabId=7&windowId=3/);
-  assert.deepEqual(f.effects.find(e => e[0] === 'behavior'), ['behavior', { openPanelOnActionClick: true }]);
+  assert.deepEqual(f.effects.find(e => e[0] === 'behavior'), ['behavior', { openPanelOnActionClick: false }]);
   const restarted = createController(f.api, []);
   await restarted.initialize();
   assert.equal(f.options.get(7)?.enabled, true);
@@ -153,4 +153,25 @@ test('fatal startup cleanup disables prior tab-specific options as well as the g
   assert.equal(f.options.get(undefined).enabled, false);
   assert.equal(f.options.get(7).enabled, false);
   assert.equal(f.options.get(8).enabled, false);
+});
+
+test('navigation reads persisted edits inside the tab queue', async () => {
+  const f=fixture();
+  const controller=createController(f.api, [], async()=>{}, async()=>[{id:'one',url:'https://example.net/'}]);
+  await controller.navigate({shortcutId:'one',disposition:'current'},f.sender);
+  assert.equal(f.tabs[0].url,'https://example.net/');
+});
+test('panel reads and edits reject inactive, moved, foreign and pending-navigation contexts', async () => {
+  for (const mutate of [f=>f.tabs[0].active=false, f=>f.tabs[0].windowId=4, f=>f.sender.id='other', f=>f.sender.url='chrome-extension://abc/diagnostics.html', f=>f.tabs[0].pendingUrl='https://example.org/']) {
+    const f=fixture(); mutate(f); let called=false;
+    await assert.rejects(f.controller.withPanelContext(f.sender,async()=>{called=true;}));
+    assert.equal(called,false);
+  }
+});
+test('panel operation can revalidate after asynchronous storage reads before committing', async () => {
+  const f=fixture(); let written=false;
+  await assert.rejects(f.controller.withPanelContext(f.sender,async(_,validate)=>{
+    f.tabs[0].pendingUrl='https://example.org/'; await validate(); written=true;
+  }));
+  assert.equal(written,false);
 });

@@ -49,3 +49,17 @@ export function panelContext(value, extensionBase) {
     return Number.isSafeInteger(tabId) && Number.isSafeInteger(windowId) && windowId > 0 ? { tabId, windowId } : null;
   } catch { return null; }
 }
+
+export function normalizeShortcutEdit({ title, url } = {}) {
+  if (typeof title !== 'string' || !title.trim() || title.trim().length > 100) throw new Error('名称需要 1 至 100 个字符。');
+  if (typeof url !== 'string' || !url.trim()) throw new Error('请输入 HTTP/HTTPS 网址。');
+  const raw = url.trim();
+  // An explicit scheme is never rewritten into an HTTPS hostname.
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+  let parsed;
+  try { parsed = new URL(candidate); } catch { throw new Error('网址格式无效。'); }
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || !parsed.hostname) {
+    throw new Error('网址仅允许无账号密码的 HTTP/HTTPS 地址。');
+  }
+  return { title: title.trim(), url: parsed.href };
+}

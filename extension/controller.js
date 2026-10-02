@@ -22,7 +22,7 @@ export async function disableAllPanels(api) {
   return errors;
 }
 
-export function createController(api, shortcuts, record = async () => {}) {
+export function createController(api, shortcuts, record = async () => {}, readShortcuts = async () => shortcuts, resolveFrequent = async () => null) {
   const queues = new Map();
   const pathFor = tab => `panel.html?tabId=${tab.id}&windowId=${tab.windowId}`;
   const safelyRecord = (event, details) => Promise.resolve(record(event, details)).catch(() => {});
@@ -47,8 +47,8 @@ export function createController(api, shortcuts, record = async () => {}) {
         ntpUrl: enabled ? (tab.pendingUrl || tab.url) : undefined
       });
     }
-    await api.action.setTitle({ tabId, title: enabled ? '打开或关闭额外快捷方式' : '请先打开原生新标签页' });
-    await api.action[enabled ? 'enable' : 'disable'](tabId);
+    await api.action.setTitle({ tabId, title: '新建原生标签页并打开快捷方式' });
+    await api.action.enable(tabId);
   }
 
   function enqueue(tabId, operation) {
@@ -63,7 +63,7 @@ export function createController(api, shortcuts, record = async () => {}) {
 
   async function initialize() {
     await api.sidePanel.setOptions({ path: 'panel.html', enabled: false });
-    await api.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+    await api.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
     const tabs = await api.tabs.query({});
     const results = await Promise.allSettled(tabs.filter(tab => Number.isInteger(tab.id)).map(tab => syncTab(tab.id)));
     for (const result of results) {
@@ -81,27 +81,43 @@ export function createController(api, shortcuts, record = async () => {}) {
     }
   }
 
-  async function navigate(message, sender) {
+  async function validateContext(context) {
+    const [active] = await api.tabs.query({ active: true, windowId: context.windowId });
+    const bound = await api.tabs.get(context.tabId);
+    if (bound.windowId !== context.windowId || !bound.active || active?.id !== bound.id || !isNativeNtp(bound) || !isNativeNtp(active)) {
+      throw new Error('原标签已离开 NTP、移到其他窗口或不再活动，请返回 NTP 后重新打开。');
+    }
+    return bound;
+  }
+
+  function withPanelContext(sender, operation) {
     const context = panelContext(sender.url, api.runtime.getURL(''));
-    if (sender.id !== api.runtime.id || !context) throw new Error('无法确认侧边栏所属窗口，请重新从工具栏打开。');
-    const shortcut = shortcuts.find(entry => entry.id === message.shortcutId);
-    if (!shortcut || !['current', 'background', 'foreground'].includes(message.disposition)) throw new Error('入口或打开方式无效。');
+    if (sender.id !== api.runtime.id || !context) return Promise.reject(new Error('无法确认侧边栏所属窗口，请重新打开。'));
     return enqueue(context.tabId, async () => {
-      const [active] = await api.tabs.query({ active: true, windowId: context.windowId });
-      // Re-read after query(), inside the same queue used by other clicks and tab updates.
-      const bound = await api.tabs.get(context.tabId);
-      if (bound.windowId !== context.windowId || !bound.active || active?.id !== bound.id || !isNativeNtp(bound) || !isNativeNtp(active)) {
-        throw new Error('原标签已离开 NTP、移到其他窗口或不再活动，请返回 NTP 后重新打开。');
-      }
+      await validateContext(context);
+      return operation(context, () => validateContext(context));
+    });
+  }
+
+  async function navigate(message, sender) {
+    if (!['current', 'background', 'foreground'].includes(message.disposition) ||
+        (message.source !== undefined && !['custom', 'frequent'].includes(message.source))) throw new Error('入口或打开方式无效。');
+    return withPanelContext(sender, async (context, validate) => {
+      const shortcut = message.source === 'frequent'
+        ? await resolveFrequent(message, context)
+        : (await readShortcuts()).find(entry => entry.id === message.shortcutId);
+      if (!shortcut) throw new Error('入口无效或列表已过期，请刷新。');
+      const bound = await validate();
+      if (shortcut.isValid && !shortcut.isValid()) throw new Error('常访问列表已过期，请刷新。');
       if (message.disposition === 'current') {
         await api.tabs.update(bound.id, { url: shortcut.url });
       } else {
         await api.tabs.create({ windowId: context.windowId, index: bound.index + 1, url: shortcut.url, active: message.disposition === 'foreground' });
       }
-      await safelyRecord('shortcut-navigation', { tabId: bound.id, windowId: context.windowId, shortcutId: shortcut.id, disposition: message.disposition });
+      await safelyRecord('shortcut-navigation', { tabId: bound.id, windowId: context.windowId, shortcutId: message.source === 'frequent' ? undefined : shortcut.id, source: message.source || 'custom', disposition: message.disposition });
       return { ok: true };
     });
   }
 
-  return { initialize, syncTab, navigate, panelOpened };
+  return { initialize, syncTab, navigate, panelOpened, withPanelContext };
 }
