@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "原生 NTP 额外快捷方式（侧边栏原型）",
+  "version": "0.1.0",
+  "description": "保留 Chrome 原生新标签页，在标签页侧边栏展示 40 个测试快捷方式。",
+  "minimum_chrome_version": "145",
+  "permissions": ["sidePanel", "tabs", "storage"],
+  "background": { "service_worker": "worker.js", "type": "module" },
+  "side_panel": { "default_path": "panel.html" },
+  "action": { "default_title": "请先打开原生新标签页", "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" } },
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "options_ui": { "page": "diagnostics.html", "open_in_tab": true },
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self'" }
+}

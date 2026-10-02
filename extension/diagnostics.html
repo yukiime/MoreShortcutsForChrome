@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NTP 侧边栏诊断</title><link rel="stylesheet" href="diagnostics.css"><script type="module" src="diagnostics.js"></script></head>
+<body>
+  <h1>NTP 侧边栏诊断</h1>
+  <p>这里只显示配置和短期 API 事件。面板注册成功不能证明界面已打开，自动恢复和焦点仍需实际观察。</p>
+  <p>打开 chrome://version 记录完整运行版本。清单在 shortcuts.json，随源码复制即可迁移。</p>
+  <button id="refresh" type="button">刷新日志</button>
+  <button id="copy" type="button">复制诊断 JSON</button>
+  <p id="status" role="status"></p>
+  <pre id="output"></pre>
+</body>
+</html>

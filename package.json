@@ -1,0 +1,6 @@
+{
+  "name": "native-ntp-sidepanel-prototype",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test tests/*.test.mjs", "check": "node scripts/check.mjs" }
+}

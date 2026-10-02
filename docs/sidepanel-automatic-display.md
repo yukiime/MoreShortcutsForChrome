@@ -1,0 +1,29 @@
+# 方案 1 自动显示：可行性核对
+
+日期：2026-10-02，Asia/Tokyo。
+
+用户已选择转回方案 1。目标是普通“+”或 Cmd+T 打开 Chrome 原生新标签页后，直接显示额外快捷方式侧栏，不经过扩展控制标签页。方案 3 在其他应用上方置顶遮挡内容，不符合用户要求的“其他应用、浮窗、Chrome”窗口顺序，停止作为当前实现方向。
+
+## 已确认的原因与接口边界
+
+当前 0.1.0 在 extension/controller.js 的 initialize 中禁用全局侧栏，为每个 NTP 注册独立 tabId/path。因此新标签页没有继承旧标签页的打开状态。此前单扩展实测已确认：新 NTP 需一次工具栏点击；方案 1 的这个入口本身不需要扩展控制标签页。
+
+[官方 Side Panel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel)将注册与打开分开：setOptions 配置可用性，open 要求用户操作；已经打开的全局侧栏支持跨标签保留。浏览器“新标签页已创建”通知不能替代扩展点击的用户手势。[Chromium open 实现](https://raw.githubusercontent.com/chromium/chromium/main/chrome/browser/extensions/api/side_panel/side_panel_api.cc)在执行窗口/标签选择前检查 user_gesture。
+
+[Chrome 131 行为公告](https://groups.google.com/a/chromium.org/g/chromium-extensions/c/uqdhvMxJ6RM)明确：注册标签页侧栏后，不再因为全局侧栏打开就自动显示它。[对应源码变更](https://chromium.googlesource.com/chromium/src/+/6dd962b30f8540dcbdd48a31e5b51f788924ff21%5E!/)移除了用 tab enabled=false 隐藏全局侧栏的测试，并加入全局配置不受标签配置影响的测试。
+
+源码和文档支持接口判断，不是本机新设计的运行验收证据。
+
+## 已明确的产品取舍
+
+候选方向：改为窗口共享侧栏。每个窗口首次点击工具栏直接打开，后续“+”和 Cmd+T 沿用它。普通网页也保留侧栏；用户关闭后，再次打开仍需工具栏点击。新增窗口、Chrome 重启、扩展重载后的首次打开不承诺免点击。
+
+用户已明确拒绝这个方向：侧栏必须只在新标签页显示。因此窗口共享侧栏候选排除。当前未修改产品代码，也未把该候选标记为实现成功。
+
+要求现在固定为：保留原生 NTP、只在 NTP 显示侧栏、普通“+”/Cmd+T 无额外点击带出侧栏。目前没有基于公开扩展接口的可靠实现路径，不应以注册成功、备用快捷键、普通网页保留侧栏或控制标签页代替用户要求。
+
+若继续追求上述全部效果，可以研究 macOS 辅助程序通过辅助功能触发 Chrome 原生工具栏侧栏入口。这是额外常驻程序与系统权限的新范围，不是当前扩展的既有能力。可行性、后台观察、同标签导航、多个窗口、用户手动关闭、用户操作竞态与 Chrome 版本兼容均未验证；需要用户选择该方向后另行设计，不能宣称已能稳定实现。
+
+## 后续实测标准
+
+只启用方案 1。分别按“+”和 Cmd+T，观察原生 NTP 与 40 项侧栏是否共存且无额外点击；再切到普通网页，核对侧栏隐藏。测试两个 Chrome 窗口的导航归属、手动关闭后的行为、同标签离开 NTP 后返回、重新加载和重启边界。仅在可见 UI 验证后宣称新标签自动带出侧栏。

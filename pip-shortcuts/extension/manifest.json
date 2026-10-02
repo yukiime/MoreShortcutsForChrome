@@ -1,0 +1,13 @@
+{
+ "manifest_version":3,
+ "name":"原生 NTP 悬浮快捷方式（Document PiP）",
+ "version":"0.1.1",
+ "description":"保留原生新标签页，在置顶悬浮窗口中管理额外快捷方式。方案 3 实验工具。",
+ "minimum_chrome_version":"130",
+ "permissions":["tabs","storage"],
+ "background":{"service_worker":"worker.js","type":"module"},
+ "action":{"default_title":"打开悬浮快捷方式控制页","default_icon":{"16":"icons/icon16.png","32":"icons/icon32.png"}},
+ "icons":{"16":"icons/icon16.png","32":"icons/icon32.png","48":"icons/icon48.png","128":"icons/icon128.png"},
+ "options_ui":{"page":"host.html","open_in_tab":true},
+ "content_security_policy":{"extension_pages":"script-src 'self'; object-src 'none'; connect-src 'self'"}
+}

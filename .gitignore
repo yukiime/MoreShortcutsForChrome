@@ -1,0 +1,14 @@
+.DS_Store
+node_modules/
+__pycache__/
+*.py[cod]
+*.zip
+.env
+.env.*
+!.env.example
+validation/
+**/validation/
+docs/progress.md
+**/docs/progress.md
+chrome-native-ntp-feasibility.md
+sidepanel-validation-session-prompt.md
