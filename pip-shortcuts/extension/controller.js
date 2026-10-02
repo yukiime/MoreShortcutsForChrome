@@ -6,7 +6,7 @@ export function createController(api, initialShortcuts, onChange = () => {}) {
   const focusGraceMs=200;
   const closeExplanation=cause=>`Chrome 无法隐藏悬浮窗口，已请求关闭以免遮挡。请重新点击启动按钮。原因：${cause}`;
   const hostUrl = api.runtime.getURL('host.html');
-  const hostMatches = value => { try { const u=new URL(value); return u.protocol===new URL(hostUrl).protocol && u.host===new URL(hostUrl).host && u.pathname==='/host.html'; } catch { return false; } };
+  const hostMatches = value => { try { const u=new URL(value); return u.protocol===new URL(hostUrl).protocol && u.host===new URL(hostUrl).host && ['/host.html','/source.html'].includes(u.pathname); } catch { return false; } };
   const persist = async () => { await api.storage.session.set({binding}); onChange(status()); };
   const status = () => binding ? structuredClone(binding) : null;
   const validBinding = b => b && ['hostTabId','hostWindowId','pipWindowId'].every(k=>Number.isSafeInteger(b[k])&&b[k]>0) && b.hostWindowId!==b.pipWindowId && typeof b.token==='string' && b.token.length>0;
@@ -14,8 +14,13 @@ export function createController(api, initialShortcuts, onChange = () => {}) {
     if (!validBinding(b)) throw Error('无效的 PiP 会话。');
     const source=await api.tabs.get(b.hostTabId);
     if (!hostMatches(source.pendingUrl || source.url)) throw Error('来源标签页已关闭或导航。');
+    const sourceUrl=new URL(source.pendingUrl||source.url).pathname==='/source.html'?api.runtime.getURL('source.html'):hostUrl;
+    if(b.sourceDocumentId){
+      const contexts=await api.runtime.getContexts({contextTypes:['TAB'],documentIds:[b.sourceDocumentId]});
+      if(!contexts.some(c=>c.documentId===b.sourceDocumentId&&c.tabId===b.hostTabId&&c.contextType==='TAB'&&c.documentUrl===sourceUrl))throw Error('来源文档已更换。');
+    }
     const pip=await api.windows.get(b.pipWindowId,{populate:true});
-    if (!findPipWindow([], [pip], hostUrl)) throw Error('不能安全识别 PiP 窗口。');
+    if (!findPipWindow([], [pip], sourceUrl)) throw Error('不能安全识别 PiP 窗口。');
     return pip;
   }
   const ready = (async () => {

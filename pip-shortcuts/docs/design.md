@@ -29,3 +29,11 @@
 extension/core.js 纯函数；controller.js 状态与 API；worker.js 事件与鉴权；host.js 来源及 PiP DOM；host.html/styles.css 页面。tests 测试窗口误判、URL 与数据校验、导航竞态、隐藏恢复、初始化与重启。scripts/check.mjs 静态资源与权限检查。validation/report.md 记录自动检查和浏览器观察的不同证据层级。
 
 无 npm 依赖、远程代码、主机权限、企业策略、Chrome flags 或用户资料文件编辑。权限只有 tabs、storage。Chrome 最低 130，实际运行版本另记。所有文件与打包产物只放本子文件夹。
+
+## 0.2.0：工具栏单击入口
+
+最高优先级调整为消除二级跳转。扩展提前自动创建不激活的 source.html 后台标签，等本地模板与监听器就绪才启用工具栏按钮。action 的第一层 getContexts 原生回调直接向真实来源标签传递点击，它直接 requestWindow，然后 worker 在本次点击所属窗口打开 NTP。用户不需要先打开控制页。
+
+后台来源标签需要保留，管理页可以关闭。worker 恢复验证 TAB 类型、tabId、documentId、URL；每个启动、注册和复用验证一次性点击令牌，导航再验证活动原生 NTP。重复点击复用同一浮窗，恢复失败必须明确报错。
+
+没有新增权限。offscreen 直接创建和激活中继候选均被精确 Chrome 154 原生链否决，详见改进记录。最终路径仍待本机屏幕验收。

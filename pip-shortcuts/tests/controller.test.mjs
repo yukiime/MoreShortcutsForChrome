@@ -209,3 +209,18 @@ test('closing after a previous restore error reports the observed state and how 
  assert.match(x.c.status().error,/重新点击/);
  assert.match(x.c.status().error,/restore unsupported/);
 });
+
+
+test('a background source tab survives worker restoration with the same document identity',async()=>{
+ const x=setup();x.tabs.get(1).url='chrome-extension://test/source.html';
+ const owner={...binding,sourceDocumentId:'ready-source'};
+ const contexts=[{documentId:'ready-source',tabId:1,contextType:'TAB',documentUrl:x.tabs.get(1).url}];
+ x.api.runtime.getContexts=async()=>structuredClone(contexts);await x.c.register(owner);
+ const restored=createController(x.api,[]);await restored.ready;assert.equal(restored.status().sourceDocumentId,'ready-source');
+ contexts[0].documentId='reloaded-source';await restored.reconcile();assert.equal(restored.status(),null);
+});
+test('a background source identity cannot be impersonated by another tab',async()=>{
+ const x=setup();x.tabs.get(1).url='chrome-extension://test/source.html';
+ x.api.runtime.getContexts=async()=>[{documentId:'fake',tabId:99,contextType:'TAB',documentUrl:x.tabs.get(1).url}];
+ await assert.rejects(x.c.register({...binding,sourceDocumentId:'fake'}));assert.equal(x.c.status(),null);
+});

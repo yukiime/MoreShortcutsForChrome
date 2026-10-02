@@ -8,7 +8,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),dir=resolve(roo
 const manifest=JSON.parse(await readFile(resolve(dir,'manifest.json'),'utf8'));
 assert.equal(manifest.manifest_version,3);assert.deepEqual(manifest.permissions,['tabs','storage']);
 for(const key of ['host_permissions','content_scripts','chrome_url_overrides','externally_connectable','web_accessible_resources'])assert.equal(manifest[key],undefined,key);
-for(const path of [manifest.background.service_worker,manifest.options_ui.page,...Object.values(manifest.icons)])await access(resolve(dir,path));
+for(const path of [manifest.background.service_worker,manifest.options_ui.page,'source.html','source.js','pip-session.js','pip-content.html',...Object.values(manifest.icons)])await access(resolve(dir,path));
 const html=await readFile(resolve(dir,'host.html'),'utf8');
 for(const [,path] of html.matchAll(/(?:src|href)="([^"]+)"/g)){assert.ok(!path.includes('://'));await access(resolve(dir,path));}
 for(const file of await readdir(dir))if(file.endsWith('.js'))execFileSync(process.execPath,['--check',resolve(dir,file)],{stdio:'pipe'});

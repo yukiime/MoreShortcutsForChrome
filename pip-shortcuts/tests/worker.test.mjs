@@ -36,10 +36,11 @@ async function setup(t) {
   const tabs = new Map([
     [1, {id: 1, windowId: 10, url: hostUrl, active: false}],
     [2, {id: 2, windowId: 10, url: 'chrome://newtab/', active: true}],
-    [3, {id: 3, windowId: 10, url: hostUrl, active: false}]
+    [3, {id: 3, windowId: 10, url: hostUrl, active: false}],
+    [4, {id:4,windowId:10,url:`chrome-extension://${extensionId}/source.html`,active:false}]
   ]);
   const windows = new Map([[10, {id: 10, type: 'normal', state: 'normal', focused: true}]]);
-  const session = {}, local = {}, createdTabs = [], updatedWindows = [], broadcasts = [];
+  const session = {}, local = {}, createdTabs = [], updatedWindows = [], broadcasts = [], contexts = [{documentId:"ready-source",frameId:0,tabId:4,contextType:"TAB",documentUrl:`chrome-extension://${extensionId}/source.html`}], creations = [], badges = [], availability = [], reloads = [];
   const snapshot = populate => structuredClone([...windows.values()].map(window => {
     if (!populate || window.tabs !== undefined) return window;
     return {...window, tabs: [...tabs.values()].filter(tab => tab.windowId === window.id)};
@@ -48,13 +49,14 @@ async function setup(t) {
     runtime: {
       id: extensionId,
       getURL: path => `chrome-extension://${extensionId}/${path}`,
-      onMessage: event(),
-      async sendMessage(message) { broadcasts.push(structuredClone(message)); }
+      onMessage: event(),onInstalled:event(),onStartup:event(),
+      getContexts(filter,callback){const found=structuredClone(contexts.filter(c=>(!filter.documentUrls||filter.documentUrls.includes(c.documentUrl))&&(!filter.documentIds||filter.documentIds.includes(c.documentId))&&(!filter.contextTypes||filter.contextTypes.includes(c.contextType))));if(callback){callback(found);return;}return Promise.resolve(found);},
+      async sendMessage(message) { broadcasts.push(structuredClone(message)); return {ok:true,tabId:message.tabId}; }
     },
     storage: {session: storageArea(session), local: storageArea(local)},
-    action: {onClicked: event()},
+    action: {onClicked: event(),async setBadgeText(value){badges.push(value);},async setTitle(){},async disable(){availability.push(false);},async enable(){availability.push(true);}},
     windows: {
-      onRemoved: event(), onFocusChanged: event(), onBoundsChanged: event(),
+      onCreated:event(),onRemoved: event(), onFocusChanged: event(), onBoundsChanged: event(),
       async getAll(options = {}) { return snapshot(options.populate); },
       async get(id, options = {}) {
         const value = snapshot(options.populate).find(window => window.id === id);
@@ -70,12 +72,14 @@ async function setup(t) {
     },
     tabs: {
       onActivated: event(), onUpdated: event(), onAttached: event(), onDetached: event(), onRemoved: event(),
+      async reload(id){reloads.push(id);tabs.get(id).status="loading";},
       async get(id) {
         if (!tabs.has(id)) throw Error('Tab missing');
         return structuredClone(tabs.get(id));
       },
       async query(query) {
         return structuredClone([...tabs.values()].filter(tab =>
+          (query.url === undefined || query.url === tab.url) &&
           (query.windowId === undefined || query.windowId === tab.windowId) &&
           (query.active === undefined || query.active === tab.active)));
       },
@@ -86,7 +90,8 @@ async function setup(t) {
       },
       async create(properties) {
         createdTabs.push(structuredClone(properties));
-        const tab = {id: Math.max(...tabs.keys()) + 1, windowId: 10, ...properties};
+        if(properties.active!==false)for(const tab of tabs.values())if(tab.windowId===(properties.windowId??10))tab.active=false;
+        const tab = {id: Math.max(...tabs.keys()) + 1, windowId: 10, active:true,...properties};
         tabs.set(tab.id, tab);
         return structuredClone(tab);
       }
@@ -111,7 +116,7 @@ async function setup(t) {
   }
   // Status also waits for controller initialization through the actual handler.
   assert.equal((await message({type: 'status'})).ok, true);
-  return {api, tabs, windows, session, local, createdTabs, updatedWindows, broadcasts, snapshot, sender, message};
+  return {api, tabs, windows, session, local, createdTabs, updatedWindows, broadcasts, contexts, creations, badges, availability,reloads,snapshot, sender, message};
 }
 
 function addPip(x, id = 20) {
@@ -241,4 +246,93 @@ test('worker runtime API boundary', {concurrency: false}, async t => {
     assert.equal(JSON.stringify(result.discovery).includes('about:blank'),false);
     assert.deepEqual(result.discovery.before,[10]);
   });
+});
+
+
+
+const sourceSender=x=>({id:extensionId,url:`chrome-extension://${extensionId}/source.html`,documentId:'ready-source',tab:structuredClone(x.tabs.get(4))});
+const click=x=>{x.api.action.onClicked.listeners[0]({id:2,windowId:10});return x.broadcasts.filter(m=>m.type==='launch').at(-1);};
+
+test('one toolbar click creates an NTP and PiP without opening a visible control page', {concurrency:false},async t=>{
+ const x=await setup(t);await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(x.createdTabs,[]);assert.equal(x.availability.at(-1),true);
+ const launch=click(x),source=sourceSender(x);assert.equal(launch.target,'source');
+ assert.equal((await x.message({type:'begin',launchId:launch.launchId},source)).ok,true);
+ assert.equal((await x.message({type:'begin',launchId:launch.launchId},{...source,documentId:'fake'})).ok,false);
+ addPip(x);x.windows.get(20).tabs=[];
+ const registered=await x.message({type:'register',token:launch.launchId},source);assert.equal(registered.ok,true);
+ assert.equal(registered.state.hostTabId,4);assert.equal(registered.state.sourceDocumentId,'ready-source');
+ assert.deepEqual(x.createdTabs,[{windowId:10,url:'chrome://newtab/'}]);
+ assert.equal(x.tabs.get(4).active,false);assert.equal(registered.state.target.tabId,5);
+ assert.equal((await x.message({type:'register',token:launch.launchId},source)).ok,false);
+});
+
+test('source initialization creates only an inactive source tab and waits for readiness', {concurrency:false},async t=>{
+ const x=await setup(t);await new Promise(resolve=>setImmediate(resolve));x.tabs.delete(4);x.contexts.length=0;
+ x.api.tabs.onRemoved.listeners.at(-1)?.(4);
+ // The dedicated source-removal listener is registered before reconciliation.
+ x.api.tabs.onRemoved.listeners[0](4);await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(x.createdTabs.length,1);assert.equal(x.createdTabs[0].active,false);
+ assert.equal(x.createdTabs[0].url,`chrome-extension://${extensionId}/source.html`);
+ assert.equal(x.availability.at(-1),false,'button stays disabled until source-ready');
+ const tab=[...x.tabs.values()].find(t=>t.url.endsWith('/source.html'));
+ x.contexts.push({tabId:tab.id,documentId:'new-source',contextType:'TAB',documentUrl:tab.url});
+ assert.equal((await x.message({type:'source-ready'},{id:extensionId,url:tab.url,tab,documentId:'new-source'})).ok,true);
+ assert.equal(x.availability.at(-1),true);
+});
+
+test('missing source reports failure without a foreground jump', {concurrency:false},async t=>{
+ const x=await setup(t);x.contexts.length=0;click(x);await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(x.createdTabs,[]);assert.ok(x.badges.some(b=>b.text==='!'));
+});
+
+test('delayed earlier launch completion cannot erase a later failure', {concurrency:false},async t=>{
+ const x=await setup(t);await new Promise(resolve=>setImmediate(resolve));let finish;
+ x.api.runtime.sendMessage=message=>{x.broadcasts.push(message);if(message.type==='source-ping')return Promise.resolve({ok:true,tabId:message.tabId});return new Promise(resolve=>{finish=resolve;});};
+ click(x);x.contexts.length=0;click(x);await new Promise(resolve=>setImmediate(resolve));
+ const error=x.session.lastLaunch.error;finish({ok:true});await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(x.session.lastLaunch.error,error);assert.equal(x.badges.at(-1).text,'!');
+});
+
+test('reuse opens NTP before visibility control and retries a paused restore', {concurrency:false},async t=>{
+ const x=await setup(t),source=sourceSender(x);let launch=click(x);
+ await x.message({type:'begin',launchId:launch.launchId},source);addPip(x);x.windows.get(20).tabs=[];
+ const registered=await x.message({type:'register',token:launch.launchId},source);assert.equal(registered.ok,true);
+ x.tabs.get(2).url='https://example.com/';for(const tab of x.tabs.values())tab.active=tab.id===2;
+ const changes=x.updatedWindows.length;launch=click(x);
+ assert.equal((await x.message({type:'begin',launchId:launch.launchId},source)).ok,true);
+ assert.equal(x.updatedWindows.length,changes);
+ const result=await x.message({type:'reuse',launchId:launch.launchId,token:registered.state.token},source);
+ assert.equal(result.ok,true);assert.equal(result.state.visibility,'normal');
+});
+
+test('changing click during discovery cannot use a later window as an earlier target', {concurrency:false},async t=>{
+ const x=await setup(t),source=sourceSender(x),first=click(x);const original=x.api.windows.getAll;let release,entered;
+ const boundary=new Promise(resolve=>{entered=resolve;});
+ x.api.windows.getAll=async options=>{if(options?.populate){entered();await new Promise(resolve=>{release=resolve;});}return original(options);};
+ const beginning=x.message({type:'begin',launchId:first.launchId},source);await boundary;click(x);release();
+ assert.equal((await beginning).ok,false);assert.equal(x.session.attempt,undefined);assert.deepEqual(x.createdTabs,[]);
+});
+
+test('concurrent register consumes one verified source click once', {concurrency:false},async t=>{
+ const x=await setup(t),source=sourceSender(x),launch=click(x);
+ await x.message({type:'begin',launchId:launch.launchId},source);addPip(x);x.windows.get(20).tabs=[];
+ const results=await Promise.all([x.message({type:'register',token:launch.launchId},source),x.message({type:'register',token:launch.launchId},source)]);
+ assert.equal(results.filter(r=>r.ok).length,1);assert.equal(x.createdTabs.length,1);
+});
+
+test('source navigation disables startup and prepares a replacement inactive tab', {concurrency:false},async t=>{
+ const x=await setup(t);await new Promise(resolve=>setImmediate(resolve));
+ x.tabs.get(4).url='https://example.com/';x.contexts[0].documentUrl='https://example.com/';
+ for(const listener of x.api.tabs.onUpdated.listeners)listener(4,{status:'loading',url:x.tabs.get(4).url},x.tabs.get(4));
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(x.availability.at(-1),false);assert.deepEqual(x.createdTabs,[{windowId:10,url:`chrome-extension://${extensionId}/source.html`,active:false}]);
+});
+test('completed unresponsive source is reloaded only once rather than keeping a dead disabled button', {concurrency:false},async t=>{
+ const x=await setup(t);await new Promise(resolve=>setImmediate(resolve));x.tabs.get(4).status='complete';
+ x.api.runtime.sendMessage=async()=>undefined;
+ x.api.windows.onCreated.listeners[0]({id:30});await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(x.reloads,[4]);assert.equal(x.availability.at(-1),false);
+ x.tabs.get(4).status='complete';x.api.windows.onCreated.listeners[0]({id:30});await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(x.reloads,[4]);assert.ok(x.session.lastLaunch.error);
 });

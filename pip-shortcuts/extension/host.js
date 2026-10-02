@@ -44,7 +44,7 @@ async function prepare(clearError=false){
   $('start').disabled=false;if(clearError)$('error').textContent='';
  }catch(error){showError(error);}finally{preparing=false;}
 }
-async function refresh(){const reply=await request({type:'status'});lastDiscovery=reply.discovery??null;updateState(reply.state);return reply;}
+async function refresh(){const reply=await request({type:'status'});if(reply.lastLaunch?.error)showError(Error(reply.lastLaunch.error));lastDiscovery=reply.discovery??null;updateState(reply.state);return reply;}
 async function start(){
  if(starting||!token)return;
  starting=true;$('start').disabled=true;$('error').textContent='';
