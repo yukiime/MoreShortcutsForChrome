@@ -17,6 +17,7 @@
 - 自动显示尚未实现，不能把新增功能验收当成自动显示通过。
 - 编辑数据存于 chrome.storage.local，不写源码、文件、Git 或远程服务。
 - history 为可选权限，拒绝不影响自定义快捷方式；历史统计只在菜单打开/刷新时触发。
+- 常访问持久开关默认关闭；开启后每次打开或恢复侧栏自动展开二级区域，关闭后隐藏榜单并禁止查询历史，原有快捷方式仍在主界面。
 - URL 仅允许无账号密码的 HTTP/HTTPS；保留既有 id、顺序和图标。
 - 网站按主机名汇总 visitCount；HTTP/HTTPS 合并，不同子域分别计数；降序取 20 项，不足不补齐。
 - Git 作者和提交者均使用本地用户，不添加 Codex 署名，不发布到 GitHub。
@@ -37,12 +38,14 @@
 - `normalizeShortcutEdit({title,url}) -> {title,url}`：URL 缺少协议时补 HTTPS，然后复用既有校验；显式非 HTTP/HTTPS 协议拒绝。
 - `createShortcutStore(api, defaults) -> {read(), edit({id,title,url,revision})}`；read 返回 `{revision,shortcuts}`，edit 串行校验、持久保存后返回同结构。storage.local 键 `shortcutDocument`，内部数据为 `{version:1,revision,shortcuts}`。
 - `createController(api,shortcuts,record,readShortcuts=async()=>shortcuts)`：新增可选清单读取函数，在导航队列内读取最新项，保持旧接口测试兼容；worker 新增 `shortcuts:get`、`shortcuts:edit` 消息，均校验 sender.id 与 panelContext。
+- worker `preferences:get`、`preferences:set` 返回 `{frequentSitesEnabled}`；storage.local 独立键 `panelPreferences:{version:1,frequentSitesEnabled:false}`。只持久保存校验过的布尔设置，写失败保持原状态。
 
 - [ ] 写失败测试：`normalizes bare domain and rejects explicit unsafe schemes` 断言 example.com 变为 https://example.com/，javascript/file/账号密码/空标题被拒绝。
 - [ ] 写失败测试：`edits persist across store recreation` 断言修改 id 保持、顺序与图标不变，新 store 读回修改；`storage failure preserves previous document` 断言拒绝后 read 仍是旧值；`stale revision cannot overwrite a concurrent edit` 断言只有第一个同版本编辑成功。
 - [ ] 运行 `node --test tests/shortcut-store.test.mjs`，确认缺少新行为导致失败。
 - [ ] 实现 store：默认文档仅在没有已保存文档时使用；损坏保存数据报错，不静默覆盖。版本值为非负安全整数，成功保存递增 1。所有修改在单一队列中重读 storage.local。
 - [ ] 实现 worker 消息与导航读取：保存成功后更新可见面板；普通导航使用最新已保存 URL。失败只回传原因，不把 URL 或历史记录加入诊断。
+- [ ] 为开关写先失败回归：默认关闭、开启后重建读回、关闭后重建保持关闭、非布尔输入拒绝、保存失败原值不变；实现独立设置存储与 worker 消息。
 - [ ] 运行 `npm test`；新增 worker 测试断言外部/diagnostics/过期面板消息拒绝，编辑成功后的导航使用新 URL。
 - [ ] 以本地用户提交：`feat: persist side panel shortcut edits`。
 
@@ -56,9 +59,9 @@
 - 可选权限 `history`；原必需权限仍为 sidePanel/tabs/storage。
 
 - [ ] 写失败测试：重复 HTTP/HTTPS URL 与不同路径合并访问次数，子域分开，23 个主机截为 20，3 个主机不补齐，次数相同按时间与主机名稳定排序。
-- [ ] 写失败测试：无历史权限时不查询历史；读取失败返回错误；撤销权限/删除历史使在途请求和导航 token 失效。
+- [ ] 写失败测试：开关关闭或无历史权限时不查询历史；读取失败返回错误；关闭开关/撤销权限/删除历史使在途请求和导航 token 失效。
 - [ ] 运行 `node --test tests/frequent-sites.test.mjs tests/worker.test.mjs`，确认新行为缺失导致失败。
-- [ ] 实现排名和后台查询：history.search 显式 `text:''`、`startTime:0`、`maxResults:2147483647`，结果达到上限时返回不完整错误。列表缓存仅在内存，worker 重启后旧 token 失效。权限/历史删除事件递增请求版本、清空缓存并通知 panel 清空。
+- [ ] 实现排名和后台查询：history.search 显式 `text:''`、`startTime:0`、`maxResults:2147483647`，结果达到上限时返回不完整错误。列表缓存仅在内存，worker 重启后旧 token 失效。关闭开关/权限撤销/历史删除递增请求版本、清空缓存并通知 panel 清空。
 - [ ] 复用 controller 的上下文与 NTP 校验后导航常访问项，禁止消息传入任意 URL；读取历史前后再次核对权限与请求版本。
 - [ ] 运行 `npm test && npm run check`；包含旧目标失活、移窗、pendingUrl、窗口隔离、token 错误的导航测试。
 - [ ] 以本地用户提交：`feat: add permission-aware frequent sites data`。
@@ -70,9 +73,9 @@
 **Interfaces:** panel 使用任务 1、2 的消息接口。存储变更仅在非脏草稿状态自动更新界面；脏草稿显示冲突提示并保留内容。使用 DOM textContent 和 createElement 渲染。
 
 - [ ] 写失败 DOM 行为测试：编辑模式点条目不会导航；保存消息包括条目 id 和原 revision；保存失败保持输入；取消/Esc 不保存；成功后名称与 URL 更新。
-- [ ] 写失败 DOM 行为测试：常访问按钮在侧栏内进入子菜单；返回不创建标签；权限申请在真实按钮点击回调立即调用；拒绝权限显示原因；加载失败显示错误；关闭菜单后的旧响应不重开菜单。
+- [ ] 写失败 DOM 行为测试：开关开启后每次打开/恢复面板自动显示榜单区域且仍有原快捷方式；关闭隐藏并不查询；其他面板开关变更同步；临时收起不修改持久开关；权限申请在真实按钮点击回调立即调用；拒绝权限显示原因；加载失败显示错误；关闭菜单后的旧响应不重开菜单。
 - [ ] 运行 `node --test tests/panel.test.mjs`，确认失败来自缺少界面行为。
-- [ ] 添加顶部编辑/常访问按钮、行内编辑表单、子菜单返回/刷新按钮、权限说明和加载状态；成功保存前不修改网格。权限撤销或历史删除通知立即清除列表。保持键盘可达与现有网格布局。
+- [ ] 添加顶部编辑按钮与常访问开关、行内编辑表单、常访问二级区域的收起/刷新按钮、权限说明和加载状态；成功保存前不修改网格。面板初始化、visibilitychange 可见、对应标签激活及 panelOpened 通知时按持久开关重新显示，关闭时禁止新查询。开关关闭、权限撤销或历史删除通知立即清除列表。保持键盘可达与现有网格布局。
 - [ ] 更新 manifest 版本至 0.2.0；README 说明编辑持久化、历史统计依据、可选权限和自动显示未实现。说明本地验证附录未纳入 Git，正式公开前需整理报告链接与许可证。
 - [ ] 运行 `npm test && npm run check`，Git diff 检查无个人网址、历史列表或敏感运行日志。
 - [ ] 浏览器只启用方案 1，在自建窗口实测编辑、重载后保存、子菜单返回/刷新、20 项与权限拒绝、两窗口导航。保留用户现有窗口，不自动重启 Chrome；无法实测的项目逐项记录。
