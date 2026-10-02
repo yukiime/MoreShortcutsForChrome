@@ -15,3 +15,26 @@ body { margin: 0; padding: 16px 8px 24px; }
   .shortcut:hover { background: rgba(232,234,237,.08); }
   .shortcut:focus-visible { outline-color: #8ab4f8; }
 }
+[hidden] { display: none !important; }
+.panel-header { padding: 0 12px 12px; }
+h1 { font-size: 16px; margin: 0; font-weight: 500; }
+h2 { font-size: 14px; margin: 0; font-weight: 500; }
+.heading-row, .button-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.heading-row { justify-content: space-between; }
+.setting { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 12px; }
+button:not(.shortcut) { font: inherit; font-size: 12px; color: inherit; background: #f1f3f4; border: 1px solid #dadce0; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
+button:disabled { opacity: .6; cursor: wait; }
+button:focus-visible, input:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; }
+.card { margin: 0 8px 16px; padding: 12px; border: 1px solid #dadce0; border-radius: 12px; }
+#editor label { display: grid; gap: 6px; font-size: 12px; margin-top: 12px; }
+#editor input { min-width: 0; width: 100%; padding: 8px; color: inherit; background: transparent; border: 1px solid #dadce0; border-radius: 6px; font: inherit; font-size: 13px; }
+.hint, #frequent-status, #auto-status { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.hint { color: #5f6368; }
+.frequent-list { display: grid; gap: 6px; margin-top: 10px; }
+button.frequent-site { display: flex; justify-content: space-between; gap: 8px; text-align: left; overflow-wrap: anywhere; }
+.visit-count { flex: none; color: #5f6368; }
+@media (prefers-color-scheme: dark) {
+  .card, button:not(.shortcut), #editor input { border-color: #5f6368; }
+  button:not(.shortcut) { background: #303134; }
+  .hint, .visit-count { color: #bdc1c6; }
+}

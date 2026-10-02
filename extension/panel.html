@@ -8,7 +8,30 @@
   <script type="module" src="panel.js"></script>
 </head>
 <body>
-  <main id="shortcuts" class="shortcut-grid" aria-label="额外快捷方式"></main>
+  <header class="panel-header">
+    <div class="heading-row"><h1>快捷方式</h1><button id="edit-mode" type="button" aria-pressed="false">编辑</button></div>
+    <label class="setting"><input id="frequent-enabled" type="checkbox">显示常访问</label>
+  </header>
+  <form id="editor" class="card" hidden>
+    <h2>编辑快捷方式</h2>
+    <label>名称<input id="edit-title" type="text" maxlength="100" required autocomplete="off"></label>
+    <label>网址<input id="edit-url" type="text" required autocomplete="off" spellcheck="false" placeholder="example.com"></label>
+    <p class="hint">可省略 https://，只支持无账号密码的 HTTP/HTTPS 网址。</p>
+    <div class="button-row"><button id="save-edit" type="submit">保存</button><button id="cancel-edit" type="button">取消</button><button id="refresh-version" type="button" hidden>刷新版本并保留草稿</button></div>
+  </form>
   <p id="status" role="status" hidden></p>
+  <section id="frequent-section" class="card" aria-label="常访问" hidden>
+    <div class="heading-row"><h2>常访问</h2><div class="button-row"><button id="refresh-frequent" type="button">刷新</button><button id="collapse-frequent" type="button">收起</button></div></div>
+    <p class="hint">按 Chrome 历史 API 返回的访问次数汇总网站，最多显示 20 项。不同子域分别计数。</p>
+    <p id="frequent-status" role="status"></p>
+    <button id="grant-history" type="button" hidden>允许读取历史</button>
+    <div id="frequent-list" class="frequent-list"></div>
+  </section>
+  <section id="auto-settings" class="card" hidden>
+    <label class="setting"><input id="auto-enabled" type="checkbox">原生新标签自动显示（实验）</label>
+    <p class="hint">只调试本扩展的隐藏文档。Chrome 会在所有窗口显示调试提示，结束后仍可能保留约 5 秒。此方式依赖浏览器调试能力，可能随更新失效。</p>
+    <p id="auto-status" role="status"></p>
+  </section>
+  <main id="shortcuts" class="shortcut-grid" aria-label="额外快捷方式"></main>
 </body>
 </html>
