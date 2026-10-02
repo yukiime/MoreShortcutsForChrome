@@ -1,6 +1,6 @@
 # 方案 1 改进：原生自动显示与 Command+T 入口
 
-> 研究归档。后续 0.2.0 实现、Command+T 实测及原生“+”实验未测项见 [本轮验收记录](sidepanel-improvements-validation-2026-10-03.md)。
+> 研究归档。当前 0.3.0 已升级原扩展并在本机 Chrome 154 实测通过原生“+”自动显示；实现、代价及剩余未测项见 [本轮验收记录](sidepanel-improvements-validation-2026-10-03.md)。
 
 研究日期：2026-10-03，Asia/Tokyo。三名 Agent 分别审查侧栏状态、手势替代路径、编辑与历史功能；主 Agent 另行核查 macOS 快捷键分发。此文件是可行性研究和改进建议，不是新功能已实现或浏览器验收通过的声明。
 

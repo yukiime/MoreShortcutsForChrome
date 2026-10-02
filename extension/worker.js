@@ -20,7 +20,7 @@ function notify(message) { chrome.runtime.sendMessage(message).catch(() => {}); 
 const experimental = chrome.runtime.getManifest().permissions.includes('debugger');
 const offscreen = experimental ? createOffscreenClient(chrome) : null;
 const auto = experimental ? createAutoOpen(chrome, {
-  ensureOffscreen: offscreen.ensure, getPreferences: () => service.store.getPreferences(), notify
+  ensureOffscreen: offscreen.ensure, getPreferences: () => service.store.getPreferences(), notify, record
 }) : null;
 const ready = fetch(chrome.runtime.getURL('shortcuts.json'))
   .then(response => { if (!response.ok) throw new Error('清单读取失败'); return response.json(); })

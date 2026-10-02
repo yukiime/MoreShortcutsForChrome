@@ -1,4 +1,4 @@
-"""Package shareable source and a separate opt-in experiment, without local evidence."""
+"""Package upgraded source and its standalone extension build, without local evidence."""
 from pathlib import Path
 import hashlib
 import subprocess

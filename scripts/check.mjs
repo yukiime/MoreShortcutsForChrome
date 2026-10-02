@@ -5,7 +5,8 @@ import { validateShortcuts } from '../extension/core.js';
 
 const manifest = JSON.parse(await readFile('extension/manifest.json', 'utf8'));
 assert.equal(manifest.manifest_version, 3);
-assert.deepEqual([...manifest.permissions].sort(), ['sidePanel', 'storage', 'tabs']);
+const experimental = manifest.permissions.includes('debugger');
+assert.deepEqual([...manifest.permissions].sort(), experimental ? ['debugger', 'offscreen', 'sidePanel', 'storage', 'tabs'] : ['sidePanel', 'storage', 'tabs']);
 assert.deepEqual(manifest.optional_permissions, ['history']);
 assert.equal(manifest.chrome_url_overrides, undefined);
 assert.equal(manifest.content_scripts, undefined);
@@ -19,4 +20,4 @@ for (const name of await readdir('extension')) {
   const result = spawnSync(process.execPath, ['--check', `extension/${name}`], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
 }
-console.log(`Static checks passed: MV3, 3 required permissions + optional history, ${entries.length} valid shortcuts, all manifest resources present, JS syntax clean.`);
+console.log(`Static checks passed: MV3, ${manifest.permissions.length} required permissions + optional history, ${entries.length} valid shortcuts, all manifest resources present, JS syntax clean.`);

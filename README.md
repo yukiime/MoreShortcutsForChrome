@@ -1,6 +1,6 @@
 # 原生 NTP 额外快捷方式
 
-保留 Chrome 真正的新标签页，在其逐标签侧栏中展示 40 个可编辑快捷方式。普通网页不显示本扩展侧栏。MV3、原生 JavaScript，无 npm 依赖、远程脚本或图标请求。当前版本 0.2.0，最低 Chrome 145。
+保留 Chrome 真正的新标签页，在其逐标签侧栏中展示 40 个可编辑快捷方式。普通网页不显示本扩展侧栏。MV3、原生 JavaScript，无 npm 依赖、远程脚本或图标请求。当前版本 0.3.0，最低 Chrome 145。
 
 ## 加载与入口
 
@@ -11,9 +11,7 @@
 
 2026-10-03 本机 Chrome 154.0.8037.93 arm64 已实测工具栏入口、Command+T 在普通网页/NTP/地址栏聚焦时的入口、两个自建窗口的目标归属，以及清除绑定后的原生命令恢复。本机目前保留该绑定。重载尚未完成的瞬间按 Command+T，曾出现只创建原生 NTP 的过渡状态；重载完成后再次按键正常。详细边界见 [本轮验收记录](docs/sidepanel-improvements-validation-2026-10-03.md)。
 
-稳定版的**原生“+”仍只创建原生 NTP，不自动打开新标签的侧栏**。工具栏按钮和已绑定命令才是一击入口。按钮创建新标签页；需要恢复当前 NTP 的面板时，可使用 Chrome 自带的侧栏选择器。按钮位置由 Chrome 管理，无法放到原生“+”旁。
-
-若电脑在本轮交付时已锁屏，解锁后在扩展卡片点一次“重新加载”，即可确保浏览器使用最后的审查修复。
+**开启“原生新标签自动显示（实验）”后，点击 Chrome 原生“+”即可自动打开新标签的侧栏。** 2026-10-03 已在当前 Chrome 实测通过。工具栏和已绑定命令继续可用。自动开关默认关闭，本机已开启。按钮位置由 Chrome 管理。
 
 ## 侧栏内编辑
 
@@ -37,19 +35,17 @@
 
 ## 原生“+”自动显示实验
 
-这条路径已实现并通过 API 边界测试，**尚未通过实际 Chrome 运行验收**。日常 `extension/manifest.json` 不包含 debugger/offscreen；单独构建：
+0.3.0 将这条路径加入当前扩展，必需权限包含 `debugger`、`offscreen`。更新现有安装时，在原扩展卡片点击“重新加载”，保持同一扩展 ID 和 local 数据，无须安装第二个实例。加载后通过工具栏入口打开侧栏，在侧栏中开启“原生新标签自动显示（实验）”。
 
-```sh
-npm run build:experiment
-```
+本机已获用户授权升级原有扩展并实测：点击原生“+”自动显示新标签的侧栏；手动关闭后刷新不强制重开；普通网页隐藏；连续点击三次“+”后侧栏属于最后的标签；关闭开关后新标签不弹出，再开启恢复。真实 Chrome 接受了隐藏文档创建、调试附着和消息手势链，自动测试覆盖成功、API 失败、在途关闭取消和异常返回值的清理；10 秒超时路径未单独模拟。浏览器调试提示随后消失。
 
-实验目录为 **build/native-auto-open**。使用实验版时应停用稳定版，避免同时装两个实例；实验版是同一程序的替代构建。两个扩展 ID 的本地数据和命令绑定不会自动迁移，切换前需自行备份。
+代码只附着本扩展 offscreen 文档，利用 CDP 临时激活与扩展消息打开目标 NTP，不调试用户网站或原生 NTP。隐藏文档真实承载历史排名 Web Worker，使用 WORKERS 创建理由。自动失败诊断只记录阶段和分类，不记录原始调试错误或目标 URL。
 
-实验构建把 `debugger`、`offscreen` 列为必需权限，仍默认关闭自动模式。加载后通过工具栏入口打开侧栏，在侧栏中开启“原生新标签自动显示（实验）”。只附着本扩展 offscreen 文档，利用 CDP 临时激活与扩展消息尝试打开目标 NTP，不调试用户网站或原生 NTP。隐藏文档真实承载历史排名 Web Worker，使用 WORKERS 创建理由。
+`npm run build:experiment` 仍生成 `build/native-auto-open`，作为相同功能的独立可分发扩展包。本机使用原 `extension` 目录。不要同时加载两个实例，不同扩展 ID 的编辑数据与命令绑定不会自动迁移。
 
 Chrome 会显示调试权限警告及所有窗口可见的调试提示，最后断开后仍可能保留约 5 秒。权限范围包含广泛调试能力，即使代码仅选择自己的文档，仍不能将其描述为轻权限接口。自动链不是 Side Panel API 承诺的稳定自动打开功能，可能随 Chrome 更新、调试限制或用户取消而失效。成功、失败与超时都会尝试断开，旧目标或手动关闭后不再继续打开。失败时保留 NTP，可使用工具栏或命令退路。[Debugger API](https://developer.chrome.com/docs/extensions/reference/api/debugger)、[Offscreen API](https://developer.chrome.com/docs/extensions/reference/api/offscreen)
 
-本轮未在用户浏览器中安装实验版或授予新调试/历史权限；原生“+”自动显示不能标为已解决。研究依据见 [入口改进研究](docs/sidepanel-auto-open-research-2026-10-03.md)。
+当前结论限于本机 Chrome 154，尚未验证其他版本、浏览器重启及 worker 自然休眠后的恢复。研究依据见 [入口改进研究](docs/sidepanel-auto-open-research-2026-10-03.md)。
 
 ## 权限、数据与开发
 
@@ -59,7 +55,7 @@ Chrome 会显示调试权限警告及所有窗口可见的调试提示，最后�
 | tabs | 识别 NTP、核对 pendingUrl、活动标签与明确窗口，创建和导航标签 |
 | storage | local 保存快捷方式与设置，session 保存最多 120 条短期诊断事件 |
 | history（可选） | 开关开启且用户授权后，在本地计算常访问排名 |
-| debugger / offscreen（仅实验构建） | 自有隐藏文档的自动显示实验及真实 Web Worker |
+| debugger / offscreen | 自有隐藏文档的自动显示实验及真实 Web Worker |
 
 没有 host_permissions、content_scripts、newtab override、辅助应用、可见控制标签页或独立浮窗。方案 3 的历史代码保留在 pip-shortcuts，不是当前实施范围。
 
@@ -72,4 +68,4 @@ npm run build:experiment
 python3 scripts/package.py
 ```
 
-Node 测试覆盖业务、UI 行为和 Chrome API 边界，不能代替浏览器手势、可见性或恢复行为验收。打包生成稳定源码 ZIP 与独立实验扩展 ZIP，不包含 validation、进度日志、Chrome 用户资料或历史结果。旧验证附录位于被 Git 忽略的 validation；本轮可共享记录在 docs。正式公开前仍需选择许可证并整理旧轮公开证据。本轮仅本地提交，没有推送或发布 GitHub。
+Node 测试覆盖业务、UI 行为和 Chrome API 边界，不能代替浏览器手势、可见性或恢复行为验收。打包生成 0.3.0 完整源码 ZIP 与同功能的独立扩展 ZIP，不包含 validation、进度日志、Chrome 用户资料或历史结果。旧验证附录位于被 Git 忽略的 validation；本轮可共享记录在 docs。正式公开前仍需选择许可证并整理旧轮公开证据。本轮仅本地提交，没有推送或发布 GitHub。

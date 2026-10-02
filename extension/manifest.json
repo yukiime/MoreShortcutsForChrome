@@ -1,13 +1,15 @@
 {
   "manifest_version": 3,
   "name": "原生 NTP 额外快捷方式（侧边栏原型）",
-  "version": "0.2.0",
-  "description": "保留 Chrome 原生新标签页，侧栏内编辑快捷方式并可选查看最多 20 个常访问网站。",
+  "version": "0.3.0",
+  "description": "保留原生新标签页，支持侧栏编辑、常访问列表及原生自动显示实验。",
   "minimum_chrome_version": "145",
   "permissions": [
     "sidePanel",
     "tabs",
-    "storage"
+    "storage",
+    "debugger",
+    "offscreen"
   ],
   "background": {
     "service_worker": "worker.js",
