@@ -12,12 +12,14 @@ function setup(saved=null){
 }
 test('restores on NTP and minimizes on regular page without focus requests',async()=>{const x=setup();await x.c.register(binding);x.tabs.get(2).url='https://example.com/';await x.c.reconcile();assert.equal(x.windows.get(20).state,'minimized');x.tabs.get(2).url='chrome://newtab/';await x.c.reconcile();assert.equal(x.windows.get(20).state,'normal');assert.ok(x.writes.every(([,v])=>!('focused'in v)));});
 test('PiP focus keeps target and allows current-tab navigation',async()=>{const x=setup();await x.c.register(binding);x.windows.get(10).focused=false;x.windows.get(20).focused=true;await x.c.reconcile(20);await x.c.openShortcut({id:'example',mode:'current',token:'token'});assert.equal(x.nav[0][1],2);assert.equal(x.nav[0][2].url,'https://example.com/');});
-test('external application focus keeps PiP while the last Chrome window remains on NTP',async()=>{
+test('external application focus hides PiP and returning to Chrome restores the retained session',async()=>{
  const x=setup();await x.c.register(binding);x.windows.get(10).focused=false;
- await x.c.reconcile(-1);await x.c.reconcile();
- assert.equal(x.windows.get(20).state,'normal');
+ for(const win of x.windows.values())win.focused=false;await x.c.reconcile(-1);await x.c.reconcile();
+ assert.equal(x.windows.get(20).state,'minimized');
  assert.deepEqual(x.c.status().target,{tabId:2,windowId:10});
- assert.equal(x.writes.length,0);
+ x.windows.get(10).focused=true;await x.c.reconcile(10);
+ assert.equal(x.windows.get(20).state,'normal');
+ assert.equal(x.c.status().pipWindowId,20);
 });
 
 test('closing the active NTP hides without destroying the session and a new native tab restores it',async()=>{
@@ -31,7 +33,7 @@ test('closing the active NTP hides without destroying the session and a new nati
 });
 
 test('external focus still hides after the tracked Chrome tab navigates away from NTP',async()=>{
- const x=setup();await x.c.register(binding);await x.c.reconcile(-1);
+ const x=setup();await x.c.register(binding);for(const win of x.windows.values())win.focused=false;await x.c.reconcile(-1);
  x.tabs.get(2).pendingUrl='https://example.org/';await x.c.reconcile();
  assert.equal(x.windows.get(20).state,'minimized');assert.equal(x.c.status().target,null);
 });
@@ -40,18 +42,18 @@ test('last selected Chrome window is retained across external focus and worker r
  const x=setup();x.windows.set(30,{id:30,type:'normal',state:'normal',focused:false});
  x.tabs.set(3,{id:3,windowId:30,url:'chrome://newtab/',active:true});
  await x.c.register(binding);x.windows.get(10).focused=false;x.windows.get(30).focused=true;
- await x.c.reconcile(30);x.windows.get(30).focused=false;await x.c.reconcile(-1);
+ await x.c.reconcile(30);x.windows.get(30).focused=false;for(const win of x.windows.values())win.focused=false;await x.c.reconcile(-1);
  assert.deepEqual(x.c.status().target,{tabId:3,windowId:30});
  const restarted=createController(x.api,[]);await restarted.ready;await restarted.reconcile();
  assert.deepEqual(restarted.status().target,{tabId:3,windowId:30});
- assert.equal(x.windows.get(20).state,'normal');
+ assert.equal(x.windows.get(20).state,'minimized');
 });
 
 test('external focus follows a newly active NTP in the same Chrome window rather than a stale tab',async()=>{
- const x=setup();await x.c.register(binding);await x.c.reconcile(-1);
+ const x=setup();await x.c.register(binding);for(const win of x.windows.values())win.focused=false;await x.c.reconcile(-1);
  x.tabs.get(2).active=false;x.tabs.set(3,{id:3,windowId:10,url:'chrome://newtab/',active:true});
  await x.c.reconcile();assert.deepEqual(x.c.status().target,{tabId:3,windowId:10});
- assert.equal(x.windows.get(20).state,'normal');
+ assert.equal(x.windows.get(20).state,'minimized');
 });
 
 test('rapid main-window then external focus retains the latest main window',async()=>{
@@ -65,7 +67,7 @@ test('rapid main-window then external focus retains the latest main window',asyn
   await Promise.all([mainFocus,...(viaPopup?[x.c.reconcile(40)]:[]),x.c.reconcile(-1)]);
   assert.equal(x.c.status().lastMainWindowId,30);
   assert.deepEqual(x.c.status().target,page==='chrome://newtab/'?{tabId:3,windowId:30}:null);
-  assert.equal(x.windows.get(20).state,page==='chrome://newtab/'?'normal':'minimized');
+  assert.equal(x.windows.get(20).state,'minimized');
   const restarted=createController(x.api,[]);await restarted.ready;await restarted.reconcile();
   assert.equal(restarted.status().lastMainWindowId,30);
   assert.deepEqual(restarted.status().target,x.c.status().target);
@@ -80,7 +82,7 @@ test('rapid PiP or popup focus then external focus does not replace the remember
   await Promise.all([x.c.reconcile(focusedId),x.c.reconcile(-1)]);
   assert.equal(x.c.status().lastMainWindowId,10);
   assert.deepEqual(x.c.status().target,{tabId:2,windowId:10});
-  assert.equal(x.writes.length,0);
+  assert.equal(x.windows.get(20).state,'minimized');
  }
 });
 
@@ -90,7 +92,7 @@ test('completed popup reconciliation still remembers a preceding main-window foc
  x.windows.set(40,{id:40,type:'popup',state:'normal',focused:false});
  x.tabs.set(3,{id:3,windowId:30,url:'https://example.org/',active:true});
  await Promise.all([x.c.reconcile(30),x.c.reconcile(40)]);
- await x.c.reconcile(-1);
+ for(const win of x.windows.values())win.focused=false;await x.c.reconcile(-1);
  assert.equal(x.c.status().lastMainWindowId,30);
  assert.equal(x.c.status().target,null);
  assert.equal(x.windows.get(20).state,'minimized');
@@ -98,7 +100,7 @@ test('completed popup reconciliation still remembers a preceding main-window foc
 
 test('minimized or closed tracked main window hides PiP during external focus',async()=>{
  for(const closed of [false,true]){
-  const x=setup();await x.c.register(binding);await x.c.reconcile(-1);
+  const x=setup();await x.c.register(binding);for(const win of x.windows.values())win.focused=false;await x.c.reconcile(-1);
   if(closed)x.windows.delete(10);else x.windows.get(10).state='minimized';
   await x.c.reconcile();assert.equal(x.windows.get(20).state,'minimized');
  }
@@ -131,10 +133,79 @@ test('initial PiP focus retains the active NTP in its source window',async()=>{
 test('registration keeps its active NTP even if another app gains focus during initialization',async()=>{
  for(const during of [false,true]){
   const x=setup();x.windows.get(10).focused=false;x.windows.get(20).focused=true;
-  if(during){const get=x.api.tabs.get;let fired=false;x.api.tabs.get=async id=>{const tab=await get(id);if(id===1&&!fired){fired=true;x.c.reconcile(-1);}return tab;};}
-  else await x.c.reconcile(-1);
+  if(during){const get=x.api.tabs.get;let fired=false;x.api.tabs.get=async id=>{const tab=await get(id);if(id===1&&!fired){fired=true;for(const win of x.windows.values())win.focused=false;x.c.reconcile(-1);}return tab;};}
+  else {for(const win of x.windows.values())win.focused=false;await x.c.reconcile(-1);}
   await x.c.register(binding);await x.c.reconcile();
   assert.deepEqual(x.c.status().target,{tabId:2,windowId:10});
-  assert.equal(x.c.status().visibility,'normal');
+  assert.equal(x.c.status().visibility,'minimized');
  }
+});
+
+
+test('a stale update snapshot is checked against the live PiP state before reporting failure',async()=>{
+ const x=setup();await x.c.register(binding);
+ x.api.windows.update=async(id,changes)=>{const before=structuredClone(x.windows.get(id));Object.assign(x.windows.get(id),changes);return before;};
+ x.tabs.get(2).url='https://example.com/';await x.c.reconcile();
+ assert.equal(x.c.status().paused,false);
+ assert.equal(x.c.status().visibility,'minimized');
+});
+
+test('a successful response cannot mask a live no-op and requests closure of its own PiP',async()=>{
+ const x=setup();await x.c.register(binding);
+ x.api.windows.update=async id=>({...x.windows.get(id),state:'minimized'});
+ x.tabs.get(2).url='https://example.com/';await x.c.reconcile();
+ assert.equal(x.c.status().closeRequested,true);
+ assert.equal(x.c.status().visibility,'normal');
+ assert.match(x.c.status().error,/重新点击/);
+});
+
+test('external focus after a latched restore failure still requests closing the overlay',async()=>{
+ const x=setup();await x.c.register(binding);await x.c.setPaused(true);
+ x.api.windows.update=async()=>{throw Error('unsupported');};
+ await x.c.setPaused(false);assert.equal(x.c.status().closeRequested,false);
+ x.windows.get(20).state='normal';for(const win of x.windows.values())win.focused=false;await x.c.reconcile(-1);
+ assert.equal(x.c.status().closeRequested,true);
+});
+
+test('a newer focus event cancels stale hide failure before closing the PiP',async()=>{
+ const x=setup();await x.c.register(binding);let newer;
+ x.api.windows.update=async id=>{x.windows.get(10).focused=true;newer=x.c.reconcile(10);return structuredClone(x.windows.get(id));};
+ for(const win of x.windows.values())win.focused=false;await x.c.reconcile(-1);await newer;
+ assert.equal(x.c.status().paused,false);
+ assert.equal(x.c.status().closeRequested,false);
+ assert.equal(x.c.status().visibility,'normal');
+});
+
+test('a transient NONE with live Chrome focus never requests closing a valid NTP session',async()=>{
+ const x=setup();await x.c.register(binding);
+ x.api.windows.update=async()=>{throw Error('unsupported minimize');};
+ await x.c.reconcile(-1);await x.c.reconcile(10);
+ assert.equal(x.c.status().closeRequested,false);
+ assert.equal(x.c.status().paused,false);
+ await x.c.openShortcut({id:'example',mode:'background',token:'token'});
+ assert.deepEqual(x.nav[0],['create',{windowId:10,url:'https://example.com/',active:false}]);
+});
+
+test('a non-focus event during NONE preserves the grace for the next Chrome focus',async()=>{
+ const x=setup();await x.c.register(binding);x.windows.get(10).focused=false;
+ x.api.windows.update=async()=>{throw Error('unsupported minimize');};
+ const lost=x.c.reconcile(-1);const tabChanged=x.c.reconcile();
+ await new Promise(resolve=>setImmediate(resolve));
+ x.windows.get(10).focused=true;const regained=x.c.reconcile(10);
+ await Promise.all([lost,tabChanged,regained]);
+ assert.equal(x.c.status().closeRequested,false);
+ assert.equal(x.c.status().paused,false);
+ assert.equal(x.c.status().visibility,'normal');
+});
+
+test('closing after a previous restore error reports the observed state and how to restart',async()=>{
+ const x=setup();await x.c.register(binding);await x.c.setPaused(true);
+ x.api.windows.update=async()=>{throw Error('restore unsupported');};
+ await x.c.setPaused(false);
+ for(const win of x.windows.values())win.focused=false;
+ x.windows.get(20).state='normal';await x.c.reconcile(-1);
+ assert.equal(x.c.status().visibility,'normal');
+ assert.equal(x.c.status().closeRequested,true);
+ assert.match(x.c.status().error,/重新点击/);
+ assert.match(x.c.status().error,/restore unsupported/);
 });

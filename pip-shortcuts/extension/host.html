@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>悬浮快捷方式控制页</title><link rel="stylesheet" href="styles.css"><script type="module" src="host.js"></script></head>
 <body class="host"><main>
-<header><span class="eyebrow">方案 3 · DOCUMENT PIP</span><h1>原生新标签页，更多快捷方式</h1><p>在置顶窗口中放下你的常用入口。保留这个控制页，悬浮窗口才能持续工作。</p></header>
+<header><span class="eyebrow">方案 3 · DOCUMENT PIP</span><h1>原生新标签页，更多快捷方式</h1><p>在悬浮窗口中放下你的常用入口。保留这个控制页，悬浮窗口才能持续工作。Chrome 管理窗口置顶和底板，当前无法实现其他应用覆盖浮窗或整个窗口纯透明。</p></header>
 <section class="controls" aria-label="悬浮窗口控制"><button id="start" disabled>启动并打开新标签页</button><button id="pause" disabled>暂停显示</button><button id="stop" disabled>停止悬浮窗口</button><button id="newtab">打开原生新标签页</button></section>
 <p id="status" role="status" aria-live="polite">正在准备…</p><p id="error" role="alert"></p>
-<p class="hint">每次启动 Chrome 后，点击一次启动按钮并保留本页。之后用浏览器“+”或 Cmd+T 打开原生新标签页，工具尝试恢复同一个浮窗；离开或关闭新标签页时最小化保留。切到其他程序时，只要最近使用的 Chrome 窗口仍停在新标签页，就保持显示。Chrome 同时只保留一个画中画窗口，启动前请先关闭视频或其他画中画。关闭本页、刷新本页、关闭浮窗或重载扩展后，需要重新启动。</p>
+<p class="hint">每次启动 Chrome 后，点击一次启动按钮并保留本页。之后用浏览器“+”或 Cmd+T 打开原生新标签页，工具尝试恢复同一个浮窗；离开或关闭新标签页时最小化保留。切到其他程序时也尝试隐藏，避免置顶浮窗遮挡其他应用。Chrome 若无法隐藏，工具会关闭自己的浮窗；此时需要重新点击启动按钮，无法自动恢复。Chrome 同时只保留一个画中画窗口，启动前请先关闭视频或其他画中画。关闭本页、刷新本页、关闭浮窗或重载扩展后，需要重新启动。</p>
 <details id="editor"><summary>管理快捷方式与备份</summary><p>在下方编辑或粘贴 JSON。保存前会检查格式，复制清单即可备份或迁移。不会修改原生快捷方式。</p><label for="json">快捷方式清单</label><textarea id="json" spellcheck="false" rows="14"></textarea><div class="controls"><button id="save">保存清单</button><button id="copy">复制清单</button></div></details>
 <details><summary>兼容性诊断</summary><p>自动显示依赖 Chrome 当前的 PiP 窗口实现。若无法识别、隐藏或恢复窗口，页面会显示错误。API 状态不能单独证明屏幕可见性。</p><button id="refresh">刷新诊断并重试准备</button><pre id="diagnostic"></pre></details>
 <section id="preview"><h2>快捷方式预览</h2><p class="hint">进入原生新标签页后才能通过悬浮窗口打开入口。⌘/Ctrl 点击或中键后台打开，Shift 点击前台打开。</p><div id="surface"><div id="grid" class="grid" aria-label="额外快捷方式"></div><p id="grid-error" role="alert"></p></div></section>

@@ -173,3 +173,21 @@ test('failed PiP registration closes own window and retains compatibility error'
  assert.equal(host.document.getElementById('surface')!==null,true);
  assert.match(host.document.getElementById('error').textContent,/PiP window is not exposed/);
 });
+
+
+test('own-session hide failure closes PiP and retains the restart explanation',async t=>{
+ const host=await loadHost(t);await host.click('start');
+ const token=host.calls.find(call=>call.type==='register').token;
+ await host.broadcast({type:'state',state:{token,paused:true,visibility:'normal',closeRequested:true,error:'不能隐藏，关闭浮窗后请重新点击启动。'}});
+ assert.equal(host.pipWindow.closed,true);
+ assert.equal(labels(host.document).length,40);
+ assert.match(host.document.getElementById('error').textContent,/重新点击/);
+ assert.equal(host.document.getElementById('start').disabled,false);
+});
+
+test('another session or a stale token cannot close this host PiP',async t=>{
+ const host=await loadHost(t);await host.click('start');
+ await host.broadcast({type:'state',state:{token:'other-session',closeRequested:true,error:'foreign failure'}});
+ assert.equal(host.pipWindow.closed,false);
+ assert.equal(labels(host.pipWindow.document).length,40);
+});

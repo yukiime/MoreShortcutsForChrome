@@ -2,7 +2,9 @@ import {isNativeNtp, findPipWindow} from './core.js';
 
 export function createController(api, initialShortcuts, onChange = () => {}) {
   let binding = null, shortcuts = initialShortcuts, tail = Promise.resolve(), revision = 0, knownFocus = null;
-  let pendingWindowFocusIds = [];
+  let pendingWindowFocusIds = [], focusLostAt = null;
+  const focusGraceMs=200;
+  const closeExplanation=cause=>`Chrome 无法隐藏悬浮窗口，已请求关闭以免遮挡。请重新点击启动按钮。原因：${cause}`;
   const hostUrl = api.runtime.getURL('host.html');
   const hostMatches = value => { try { const u=new URL(value); return u.protocol===new URL(hostUrl).protocol && u.host===new URL(hostUrl).host && u.pathname==='/host.html'; } catch { return false; } };
   const persist = async () => { await api.storage.session.set({binding}); onChange(status()); };
@@ -26,15 +28,23 @@ export function createController(api, initialShortcuts, onChange = () => {}) {
   async function clearInternal() { binding=null; pendingWindowFocusIds=[]; await persist(); }
   async function reconcileInternal(ticket) {
     if (!binding) return;
+    // NONE can be a transient event between two Chrome windows. Tab events must
+    // not bypass this same grace while waiting for the next focus event.
+    if(knownFocus===-1 && focusLostAt!==null) {
+      const remaining=focusGraceMs-(Date.now()-focusLostAt);
+      if(remaining>0) await new Promise(resolve=>setTimeout(resolve,remaining));
+      if(ticket!==revision) return;
+    }
     let pip;
     try { pip=await verify(binding); } catch { await clearInternal(); return; }
-    if(ticket!==revision || binding.error) return;
+    if(ticket!==revision) return;
     const windows=await api.windows.getAll();
     if(ticket!==revision) return;
-    const focused=knownFocus===null ? windows.find(w=>w.focused)?.id : knownFocus;
-    // External app focus does not mean the user left the Chrome NTP.
-    // Remember the last main window independently of the current NTP target,
-    // so closing/navigating that tab can hide PiP without losing its owner.
+    const liveFocused=windows.find(w=>w.focused)?.id;
+    const focused=knownFocus===null || knownFocus===-1 ? liveFocused : knownFocus;
+    if(knownFocus===-1 && liveFocused!==undefined) {knownFocus=liveFocused;focusLostAt=null;}
+    // Keep the NTP owner across external focus, but hide the always-on-top PiP
+    // so it cannot cover another application. Chrome does not expose z-order.
     const useLastMain=focused===binding.pipWindowId || focused===-1 || focused===undefined;
     const mainWindow=id=>windows.find(w=>w.id===id && w.id!==binding.pipWindowId && w.type==='normal' && !w.alwaysOnTop);
     const rememberedMain=pendingWindowFocusIds.map(mainWindow).find(Boolean);
@@ -47,20 +57,40 @@ export function createController(api, initialShortcuts, onChange = () => {}) {
     const latestMain=main ?? rememberedMain;
     if(latestMain) binding.lastMainWindowId=latestMain.id;
     binding.target=target;
-    const desired=target && !binding.paused ? 'normal' : 'minimized';
+    const externalFocus=focused===-1 || focused===undefined;
+    const desired=target && !binding.paused && !externalFocus ? 'normal' : 'minimized';
+    if(binding.error) {
+      // A prior restore error must not leave a visible overlay over other apps.
+      binding.visibility=pip.state;
+      if(desired==='minimized' && pip.state!=='minimized') {
+        if(!binding.closeRequested) binding.error=closeExplanation(binding.error);
+        binding.closeRequested=true;
+      }
+      await persist();return;
+    }
     try {
       if(pip.state!==desired) {
-        const updated=await api.windows.update(binding.pipWindowId,{state:desired});
-        if(updated.state!==desired) throw Error(`Chrome 未将 PiP 状态变为 ${desired}。`);
+        await api.windows.update(binding.pipWindowId,{state:desired});
+        if(ticket!==revision) return;
+        pip=await verify(binding);
+        if(ticket!==revision) return;
+        if(pip.state!==desired) throw Error(`Chrome 未将 PiP 状态变为 ${desired}。`);
       }
       binding.visibility=desired;
     } catch(error) {
-      binding.visibility=pip.state; binding.paused=true; binding.error=`自动显示已暂停：${error.message}`;
+      if(ticket!==revision) return;
+      binding.visibility=pip.state; binding.paused=true;
+      binding.closeRequested=desired==='minimized';
+      binding.error=binding.closeRequested
+        ? closeExplanation(error.message)
+        : `自动显示已暂停：${error.message}`;
     }
     await persist();
   }
   function reconcile(focusId) {
     if(Number.isInteger(focusId)) {
+      if(focusId===-1 && knownFocus!==-1) focusLostAt=Date.now();
+      else if(focusId!==-1) focusLostAt=null;
       knownFocus=focusId;
       // Record focus before asynchronous reconciliation can be superseded.
       // Validate candidates against live main windows when the latest pass runs.
@@ -74,7 +104,7 @@ export function createController(api, initialShortcuts, onChange = () => {}) {
     return enqueue(async()=>{
       await verify(value);
       if(binding && (binding.hostTabId!==value.hostTabId || binding.token!==value.token)) throw Error('已有来源页控制 PiP，请先停止原会话。');
-      binding={...value,lastMainWindowId:value.hostWindowId,target:null,paused:false,error:null,visibility:'normal'};
+      binding={...value,lastMainWindowId:value.hostWindowId,target:null,paused:false,error:null,closeRequested:false,visibility:'normal'};
       // Preserve focus events already received during requestWindow / registration.
       // requestWindow initially focuses PiP. Seed only its opener's active NTP,
       // then reconcile validates the selected main window's current tab again.
@@ -106,7 +136,7 @@ export function createController(api, initialShortcuts, onChange = () => {}) {
   function setPaused(paused) {
     return enqueue(async()=>{
       if(!binding) throw Error('请先启动悬浮快捷方式。');
-      binding.paused=Boolean(paused); if(!paused) binding.error=null;
+      binding.paused=Boolean(paused); if(!paused) {binding.error=null;binding.closeRequested=false;}
       await reconcileInternal(revision); return status();
     });
   }

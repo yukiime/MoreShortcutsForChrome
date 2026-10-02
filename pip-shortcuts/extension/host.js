@@ -18,6 +18,7 @@ function updateState(state){
  $('pause').disabled=!own;$('stop').disabled=!own;
  $('pause').textContent=state?.paused?'恢复自动显示':'暂停显示';
  if(state?.error)$('error').textContent=state.error;
+ if(own&&state.closeRequested&&pip&&!pip.closed)pip.close();
 }
 function render(){
  grid.replaceChildren();
