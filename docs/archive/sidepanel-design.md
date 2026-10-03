@@ -1,6 +1,6 @@
 # 原生 NTP 侧边栏验证设计
 
-> 历史 0.1.0 记录。当前 0.2.0 实现与未验收项目见 [本轮验收记录](sidepanel-improvements-validation-2026-10-03.md)。
+> 历史 0.1.0 记录。当前 0.3.0 实现与剩余未验收项目见 [本轮验收记录](../validation.md)。
 
 日期：2026-10-02。依据：用户本轮完整范围与 chrome-native-ntp-feasibility.md。
 

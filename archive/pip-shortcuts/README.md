@@ -1,4 +1,6 @@
-# 方案 3：原生新标签页悬浮快捷方式
+# 归档：Document PiP 快捷方式原型
+
+此目录保留早期方案源码和测试，已停止作为主实现开发。当前产品请加载仓库根目录的 `extension/`，见 [主项目说明](../../README.md)。以下为原型使用说明，不代表当前产品的状态。
 
 独立的 Chrome 扩展。保留真正的原生新标签页，把额外 40 个入口放在 Document PiP 浮窗中；与外层侧边栏方案 1 分别加载。
 
@@ -42,15 +44,15 @@
 无需 npm install，已有 Node 和 Python 即可运行：
 
 ```sh
-npm test --prefix pip-shortcuts
-npm run check --prefix pip-shortcuts
-python3 pip-shortcuts/scripts/package.py
+npm test --prefix archive/pip-shortcuts
+npm run check --prefix archive/pip-shortcuts
+python3 archive/pip-shortcuts/scripts/package.py
 ```
 
 若终端已在 pip-shortcuts 中，省略前缀。ZIP 包包含独立源码、测试和说明，不含 Chrome 用户资料或个人存储。
 
-程序变更已由 Git 记录，作者及提交人为本地用户 **Mio**。方案 1 的未提交文档未包含在这些提交中，未创建或公开 GitHub 仓库。
+此目录的开发历史保留在 Git 记录中。
 
-[设计](docs/design.md)、[实施记录](docs/improvement-plan.md)、[验证报告](validation/report.md)记录已验证与未验证项目。验收时两份原型分别启用。本轮初始为方案 1 开、方案 3 关；锁屏前最后确认为方案 1 关、方案 3 开，测试窗口及开关恢复仍待解锁处理。
+[设计](docs/design.md)和[实施记录](docs/improvement-plan.md)保留原方案决策。原始本机验证报告仅保存在 Git 忽略的 `.local/` 中，不随公开源码分发。
 
 原生能力参考 [Chrome Document PiP](https://developer.chrome.com/docs/web-platform/document-picture-in-picture/) 和 [windows API](https://developer.chrome.com/docs/extensions/reference/api/windows)。单击激活的推导来自 Chromium 154 对应源码，不能代替本机运行结果。

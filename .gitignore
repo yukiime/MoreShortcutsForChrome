@@ -1,17 +1,28 @@
-.DS_Store
-node_modules/
-__pycache__/
-*.py[cod]
-*.zip
-.env
-.env.*
-!.env.example
+# Local evidence, generated builds and release archives
+.local/
+build/
+dist/
 validation/
 **/validation/
 docs/progress.md
 **/docs/progress.md
+.superpowers/
+*.zip
+*.log
 chrome-native-ntp-feasibility.md
 sidepanel-validation-session-prompt.md
 
-.superpowers/
-build/
+# Dependencies and caches
+node_modules/
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
+
+# Environment and local credentials
+.env
+.env.*
+!.env.example
+.npmrc
+*.pem
+*.key

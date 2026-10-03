@@ -1,6 +1,6 @@
 # Sidepanel prototype implementation plan
 
-> 历史 0.1.0 记录。当前 0.2.0 实现与未验收项目见 [本轮验收记录](sidepanel-improvements-validation-2026-10-03.md)。
+> 历史 0.1.0 记录。当前 0.3.0 实现与剩余未验收项目见 [本轮验收记录](../validation.md)。
 
 Goal: 原生 NTP 保留，40 个额外快捷方式可在普通 MV3 标签页面板使用。
 Spec: docs/sidepanel-design.md

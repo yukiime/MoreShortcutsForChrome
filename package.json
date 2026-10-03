@@ -1,10 +1,12 @@
 {
-  "name": "native-ntp-sidepanel-prototype",
+  "name": "more-shortcuts-for-chrome",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check.mjs",
-    "build:experiment": "node scripts/build-experiment.mjs"
-  }
+    "build": "node scripts/build-extension.mjs",
+    "package": "python3 scripts/package.py"
+  },
+  "description": "Editable shortcuts and frequent sites beside Chrome native new tabs"
 }

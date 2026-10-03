@@ -1,34 +1,38 @@
-"""Package upgraded source and its standalone extension build, without local evidence."""
+"""Create public source and extension archives; exclude all local evidence."""
 from pathlib import Path
 import hashlib
-import subprocess
 import zipfile
 
 root = Path(__file__).resolve().parents[1]
-subprocess.run(['node', str(root / 'scripts/build-experiment.mjs')], cwd=root, check=True)
-excluded_parts = {'__pycache__', 'validation', '.git', 'node_modules'}
-excluded_names = {'progress.md', '.DS_Store'}
+output = root / 'dist'
+output.mkdir(exist_ok=True)
+excluded_parts = {'.local', 'build', 'dist', '__pycache__', 'validation', '.git', 'node_modules', '.superpowers'}
+excluded_names = {'progress.md', '.DS_Store', '.npmrc', 'Thumbs.db'}
 
 
 def shareable(path):
     return (path.is_file() and not excluded_parts.intersection(path.relative_to(root).parts)
-            and path.name not in excluded_names and path.suffix not in {'.log', '.pyc', '.zip'})
+            and path.name not in excluded_names and not path.name.startswith('.env')
+            and path.suffix not in {'.log', '.pyc', '.zip', '.pem', '.key'})
 
 
-def archive(target, files, relative_root, prefix):
-    with zipfile.ZipFile(target, 'w', compression=zipfile.ZIP_DEFLATED) as output:
+def archive(name, files, relative_root, prefix):
+    target = output / name
+    with zipfile.ZipFile(target, 'w', compression=zipfile.ZIP_DEFLATED) as package:
         for path in sorted(files):
-            output.write(path, Path(prefix) / path.relative_to(relative_root))
-    with zipfile.ZipFile(target) as output:
-        assert output.testzip() is None
-        assert not any('/validation/' in name or name.endswith('/progress.md') for name in output.namelist())
-    print(f'{target.name}: {target.stat().st_size} bytes, {len(files)} files')
+            package.write(path, Path(prefix) / path.relative_to(relative_root))
+    with zipfile.ZipFile(target) as package:
+        assert package.testzip() is None
+        assert not any(excluded_parts.intersection(Path(name).parts) for name in package.namelist())
+    print(f'{target.relative_to(root)}: {target.stat().st_size} bytes, {len(files)} files')
     print(f'SHA256 {hashlib.sha256(target.read_bytes()).hexdigest()}')
 
 
-files = [root / 'README.md', root / 'package.json', root / '.gitignore']
-for folder in ['extension', 'tests', 'scripts', 'docs']:
+files = [root / name for name in ['README.md', 'CONTRIBUTING.md', 'package.json', '.gitignore', '.gitattributes']]
+if (root / 'LICENSE').is_file():
+    files.append(root / 'LICENSE')
+for folder in ['extension', 'tests', 'scripts', 'docs', 'archive']:
     files.extend(path for path in (root / folder).rglob('*') if shareable(path))
-archive(root / 'native-ntp-sidepanel-prototype.zip', files, root, 'native-ntp-sidepanel-prototype')
-experiment = root / 'build/native-auto-open'
-archive(root / 'native-ntp-sidepanel-experiment.zip', [p for p in experiment.rglob('*') if shareable(p)], experiment, 'native-ntp-sidepanel-experiment')
+archive('MoreShortcutsForChrome-source.zip', files, root, 'MoreShortcutsForChrome')
+extension = root / 'extension'
+archive('MoreShortcutsForChrome-extension.zip', [p for p in extension.rglob('*') if shareable(p)], extension, 'extension')
