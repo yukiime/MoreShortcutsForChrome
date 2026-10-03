@@ -26,3 +26,6 @@ Thumbs.db
 .npmrc
 *.pem
 *.key
+
+# Existing local Chrome installation only; public source is sidepanel/extension
+/extension

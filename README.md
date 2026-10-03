@@ -4,7 +4,7 @@
 
 | | 方案 1：侧边栏 | 方案 3：Document PiP 浮窗 |
 | --- | --- | --- |
-| 源码 | `extension/` | `pip-shortcuts/extension/` |
+| 源码 | `sidepanel/extension/` | `pip-shortcuts/extension/` |
 | 版本 | 0.3.0 | 0.2.0 |
 | 最低 Chrome | 145 | 130 |
 | 显示方式 | Chrome 标签页侧栏 | 独立画中画浮窗 |
@@ -20,11 +20,11 @@
 
 1. 下载或克隆本仓库。
 2. 打开 `chrome://extensions`，开启开发者模式。
-3. 点击“加载已解压的扩展程序”，选择仓库的 **`extension/`** 文件夹。
+3. 点击“加载已解压的扩展程序”，选择仓库的 **`sidepanel/extension/`** 文件夹。
 4. 将“原生 NTP 额外快捷方式（侧边栏原型）”固定到工具栏。
 5. 点击扩展按钮，创建原生新标签页并显示其侧栏。
 
-已有安装可在原扩展卡片点击“重新加载”。保持原加载目录可以保留扩展 ID 与本地编辑数据。安装无需 Node.js、Python 或构建步骤。
+安装无需 Node.js、Python 或构建步骤。已有旧根目录安装请先阅读 [迁移说明](docs/migration.md)，不要直接移除后另装。当前本机保留被 Git 忽略的兼容链接，原扩展卡片可以继续重新加载。
 
 ## 方案 1：使用
 
@@ -48,7 +48,7 @@
 
 快捷方式和设置保存在 `chrome.storage.local`。浏览历史仅在扩展内计算，不上传。没有远程脚本、远程图标、网页注入或新标签页替换。
 
-源码中的 `extension/shortcuts.json` 是初始示例清单。**复制源码或 ZIP 不会备份已编辑的个人数据**；移除扩展会删除其本地存储。
+源码中的 `sidepanel/extension/shortcuts.json` 是初始示例清单。**复制源码或 ZIP 不会备份已编辑的个人数据**；移除扩展会删除其本地存储。
 
 ## 方案 3：安装与使用
 
@@ -67,23 +67,21 @@ npm run build
 npm run package
 ```
 
-构建副本位于 `build/extension/`，打包产物位于 `dist/`：
+构建副本位于 `build/sidepanel/extension/` 与 `build/pip-shortcuts/extension/`，打包产物位于 `dist/`：
 
 - `MoreShortcutsForChrome-source.zip`：可分享的两个方案的源码、测试、说明及历史文档。
-- `MoreShortcutsForChrome-extension.zip`：可解压加载的方案 1 扩展。
+- `MoreShortcutsForChrome-sidepanel-extension.zip`：可解压加载的方案 1 扩展。
 - `MoreShortcutsForChrome-pip-extension.zip`：可解压加载的方案 3 扩展。
 
 ## 目录
 
 ```text
-extension/              方案 1 侧栏扩展，直接加载此目录
-tests/                  方案 1 的 Node 测试
-scripts/                静态检查、构建和打包工具
-docs/                   使用、架构、验证和发布说明
-docs/archive/           历史研究与设计记录
-pip-shortcuts/          方案 3：独立扩展、测试、脚本和说明
+sidepanel/              方案 1：扩展、测试、脚本和文档
+pip-shortcuts/          方案 3：扩展、测试、脚本和文档
+scripts/                统一构建和打包入口
+docs/                   两方案共有的发布与迁移说明
 ```
 
 `build/`、`dist/` 和 `.local/` 不进入 Git。`.local/` 仅保留原始本机验收资料、旧包和开发笔记；发布包不包含这些资料。
 
-详细说明见 [使用与边界](docs/usage.md)、[架构](docs/architecture.md)、[验证记录](docs/validation.md)和 [GitHub 发布说明](docs/publishing.md)。参与开发请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+两个方案的独立说明见 [方案 1](sidepanel/README.md)和 [方案 3](pip-shortcuts/README.md)。方案 1 详细说明见 [使用与边界](sidepanel/docs/usage.md)、[架构](sidepanel/docs/architecture.md)、[验证记录](sidepanel/docs/validation.md)和 [GitHub 发布说明](docs/publishing.md)。参与开发请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。

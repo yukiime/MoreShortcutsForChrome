@@ -3,12 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/*.test.mjs",
-    "check": "node scripts/check.mjs",
-    "build": "node scripts/build-extension.mjs",
+    "test": "npm test --prefix sidepanel && npm test --prefix pip-shortcuts",
+    "check": "npm run check --prefix sidepanel && npm run check --prefix pip-shortcuts",
+    "build": "node scripts/build-extensions.mjs",
     "package": "python3 scripts/package.py",
-    "test:all": "npm test && npm test --prefix pip-shortcuts",
-    "check:all": "npm run check && npm run check --prefix pip-shortcuts"
+    "test:all": "npm test",
+    "check:all": "npm run check"
   },
   "description": "Two independent Chrome native new tab shortcut prototypes: side panel and Document PiP"
 }

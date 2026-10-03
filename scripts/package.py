@@ -31,11 +31,11 @@ def archive(name, files, relative_root, prefix):
 files = [root / name for name in ['README.md', 'CONTRIBUTING.md', 'package.json', '.gitignore', '.gitattributes']]
 if (root / 'LICENSE').is_file():
     files.append(root / 'LICENSE')
-for folder in ['extension', 'tests', 'scripts', 'docs', 'pip-shortcuts']:
+for folder in ['sidepanel', 'pip-shortcuts', 'scripts', 'docs']:
     files.extend(path for path in (root / folder).rglob('*') if shareable(path))
 archive('MoreShortcutsForChrome-source.zip', files, root, 'MoreShortcutsForChrome')
-extension = root / 'extension'
-archive('MoreShortcutsForChrome-extension.zip', [p for p in extension.rglob('*') if shareable(p)], extension, 'extension')
+extension = root / 'sidepanel/extension'
+archive('MoreShortcutsForChrome-sidepanel-extension.zip', [p for p in extension.rglob('*') if shareable(p)], extension, 'extension')
 
 pip_extension = root / 'pip-shortcuts/extension'
 archive('MoreShortcutsForChrome-pip-extension.zip', [p for p in pip_extension.rglob('*') if shareable(p)], pip_extension, 'extension')

@@ -2,7 +2,7 @@
 
 ## 上传内容
 
-上传 Git 跟踪的源码、测试、脚本、文档和归档。方案 1 在根目录 `extension/`，方案 3 在 `pip-shortcuts/extension/`，两份源码都随同一仓库上传。`docs/archive/` 是历史设计资料。
+上传 Git 跟踪的源码、测试、脚本、文档和归档。方案 1 在 `sidepanel/extension/`，方案 3 在 `pip-shortcuts/extension/`，两份源码都随同一仓库上传。`sidepanel/docs/archive/` 是方案 1 历史设计资料。
 
 `.gitignore` 排除 `.local/`、`build/`、`dist/`、原始验收目录、ZIP、日志、环境变量文件和系统缓存。`.local/` 可能包含私人本机资料，不要使用忽略规则以外的整目录上传或 `git add -f`。
 
@@ -33,4 +33,4 @@ git push -u origin HEAD:main
 
 ## 发布扩展包
 
-GitHub Release 可分别附方案 1 的 `dist/MoreShortcutsForChrome-extension.zip` 和方案 3 的 `dist/MoreShortcutsForChrome-pip-extension.zip`。使用者选择方案，解压对应 ZIP 后加载里面的 `extension/` 文件夹。源码和扩展 ZIP 均不包含个人编辑数据，扩展包也不是 Chrome Web Store 签名安装包。
+GitHub Release 可分别附方案 1 的 `dist/MoreShortcutsForChrome-sidepanel-extension.zip` 和方案 3 的 `dist/MoreShortcutsForChrome-pip-extension.zip`。使用者选择方案，解压对应 ZIP 后加载里面的 `extension/` 文件夹。源码和扩展 ZIP 均不包含个人编辑数据，扩展包也不是 Chrome Web Store 签名安装包。

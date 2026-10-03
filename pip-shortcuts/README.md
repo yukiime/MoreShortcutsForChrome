@@ -1,6 +1,6 @@
 # 方案 3：Document PiP 快捷方式
 
-本仓库的独立 Chrome 扩展，用画中画浮窗展示额外 40 个快捷方式，保留 Chrome 原生新标签页。与 [方案 1 侧栏](../README.md)分别加载、存储和测试。
+本仓库的独立 Chrome 扩展，用画中画浮窗展示额外 40 个快捷方式，保留 Chrome 原生新标签页。与 [方案 1 侧栏](../sidepanel/README.md)分别加载、存储和测试。
 
 当前版本 **0.2.0**，最低 Chrome **130**。工具栏单击启动属于实验功能：自动测试已覆盖启动、复用、身份校验、并发和失败清理，真实浏览器的单击启动与窗口焦点验收尚未完成。
 
@@ -38,6 +38,7 @@
 ```sh
 npm test --prefix pip-shortcuts
 npm run check --prefix pip-shortcuts
+npm run build --prefix pip-shortcuts
 npm run package
 ```
 
