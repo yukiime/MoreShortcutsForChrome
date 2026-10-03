@@ -6,7 +6,9 @@
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check.mjs",
     "build": "node scripts/build-extension.mjs",
-    "package": "python3 scripts/package.py"
+    "package": "python3 scripts/package.py",
+    "test:all": "npm test && npm test --prefix pip-shortcuts",
+    "check:all": "npm run check && npm run check --prefix pip-shortcuts"
   },
-  "description": "Editable shortcuts and frequent sites beside Chrome native new tabs"
+  "description": "Two independent Chrome native new tab shortcut prototypes: side panel and Document PiP"
 }

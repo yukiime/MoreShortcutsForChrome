@@ -1,10 +1,22 @@
 # More Shortcuts for Chrome
 
-在 Chrome 原生新标签页旁显示额外快捷方式，支持侧栏内编辑、常访问二级菜单和新标签自动显示。保留原生搜索框、账号入口和默认快捷方式，进入普通网页时隐藏本扩展侧栏。
+保留 Chrome 原生新标签页，为额外快捷方式提供两种独立实现。两份扩展放在同一个仓库中，分别加载、设置和测试。
 
-当前版本 **0.3.0**，最低 Chrome **145**。原生 HTML/CSS/JavaScript，Manifest V3，无 npm 依赖。原生“+”自动显示已在 Chrome 154 上实测，属于依赖调试能力的实验功能。
+| | 方案 1：侧边栏 | 方案 3：Document PiP 浮窗 |
+| --- | --- | --- |
+| 源码 | `extension/` | `pip-shortcuts/extension/` |
+| 版本 | 0.3.0 | 0.2.0 |
+| 最低 Chrome | 145 | 130 |
+| 显示方式 | Chrome 标签页侧栏 | 独立画中画浮窗 |
+| 快捷方式管理 | 侧栏内修改名称和网址 | 管理页编辑 JSON 清单 |
+| 常访问列表 | 支持可选历史权限 | 未实现 |
+| 入口 | 工具栏、手动绑定命令；原生“+”自动显示实验 | 工具栏单击启动实验 |
+| 权限 | sidePanel、tabs、storage、debugger、offscreen；可选 history | tabs、storage |
+| 运行验收 | Chrome 154 已实测原生“+”自动显示 | 单击启动与窗口焦点尚未完成运行验收 |
 
-## 安装
+两种实现均使用 Manifest V3 和原生 HTML/CSS/JavaScript，无 npm 依赖。建议先使用已实测的方案 1。方案 3 保留浮窗探索方向，当前窗口层级、透明底板和恢复行为存在限制，详见 [方案 3 说明](pip-shortcuts/README.md)。
+
+## 方案 1：安装
 
 1. 下载或克隆本仓库。
 2. 打开 `chrome://extensions`，开启开发者模式。
@@ -14,7 +26,7 @@
 
 已有安装可在原扩展卡片点击“重新加载”。保持原加载目录可以保留扩展 ID 与本地编辑数据。安装无需 Node.js、Python 或构建步骤。
 
-## 使用
+## 方案 1：使用
 
 - **编辑快捷方式**：点击“编辑”，选择条目，修改名称和网址后保存。无协议域名按 HTTPS 处理。
 - **常访问**：开启“显示常访问”，按提示授予可选历史权限。二级菜单按访问次数显示最多 20 个网站，支持收起、展开和刷新。
@@ -23,7 +35,7 @@
 
 自动显示会短暂触发 Chrome 调试提示。代码只附着本扩展的隐藏文档，但 `debugger` 权限本身具有广泛调试能力。此路径可能受 Chrome 更新或调试限制影响；失败时仍可使用工具栏和快捷键入口。
 
-## 权限与数据
+## 方案 1：权限与数据
 
 | 权限 | 用途 |
 | --- | --- |
@@ -38,31 +50,38 @@
 
 源码中的 `extension/shortcuts.json` 是初始示例清单。**复制源码或 ZIP 不会备份已编辑的个人数据**；移除扩展会删除其本地存储。
 
+## 方案 3：安装与使用
+
+在 `chrome://extensions` 加载 **`pip-shortcuts/extension/`**，不要选择方案 1 的目录。点击方案 3 的工具栏按钮，尝试打开原生新标签页与浮窗；后台会话标签用于持有浮窗，需要保留。使用扩展选项页编辑、保存或备份 JSON 清单。
+
+方案 3 会尝试在离开 NTP 或切到其他应用时隐藏浮窗；失败时关闭浮窗以减少遮挡，再点击工具栏重新启动。完整使用方法、已知边界和验证范围见 [方案 3 README](pip-shortcuts/README.md)。两份扩展各自保存数据，不自动同步。比较时建议每次只启用其中一份。
+
 ## 开发与打包
 
 开发检查使用 Node.js 22 或更新版本，打包需要 Python 3。无需 `npm install`。
 
 ```sh
-npm test
-npm run check
+npm run test:all
+npm run check:all
 npm run build
 npm run package
 ```
 
 构建副本位于 `build/extension/`，打包产物位于 `dist/`：
 
-- `MoreShortcutsForChrome-source.zip`：可分享的源码、测试、说明及归档。
-- `MoreShortcutsForChrome-extension.zip`：可解压加载的当前扩展。
+- `MoreShortcutsForChrome-source.zip`：可分享的两个方案的源码、测试、说明及历史文档。
+- `MoreShortcutsForChrome-extension.zip`：可解压加载的方案 1 扩展。
+- `MoreShortcutsForChrome-pip-extension.zip`：可解压加载的方案 3 扩展。
 
 ## 目录
 
 ```text
-extension/              当前扩展，直接加载此目录
-tests/                  当前扩展的 Node 测试
+extension/              方案 1 侧栏扩展，直接加载此目录
+tests/                  方案 1 的 Node 测试
 scripts/                静态检查、构建和打包工具
 docs/                   使用、架构、验证和发布说明
 docs/archive/           历史研究与设计记录
-archive/pip-shortcuts/  停止作为主方案开发的 PiP 原型
+pip-shortcuts/          方案 3：独立扩展、测试、脚本和说明
 ```
 
 `build/`、`dist/` 和 `.local/` 不进入 Git。`.local/` 仅保留原始本机验收资料、旧包和开发笔记；发布包不包含这些资料。

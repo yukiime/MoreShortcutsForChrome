@@ -1,6 +1,6 @@
 # 开发说明
 
-当前开发范围是根目录 `extension/`。`archive/pip-shortcuts/` 保留旧方案源码，不属于主扩展。
+本仓库有两个独立方案：方案 1 位于根目录 `extension/`，方案 3 位于 `pip-shortcuts/extension/`。修改时明确目标方案，两份扩展分别加载。
 
 ## 环境与检查
 
@@ -23,9 +23,9 @@ npm run check
 
 问题报告可提供 Chrome 版本、操作步骤和预期/实际表现。附诊断或截图前，请移除账号、个人网址和其他私人内容。
 
-历史原型如需复查，可运行：
+方案 3 的检查：
 
 ```sh
-npm test --prefix archive/pip-shortcuts
-npm run check --prefix archive/pip-shortcuts
+npm test --prefix pip-shortcuts
+npm run check --prefix pip-shortcuts
 ```
