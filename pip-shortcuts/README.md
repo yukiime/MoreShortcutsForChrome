@@ -1,8 +1,25 @@
 # 方案 3：Document PiP 快捷方式
 
-本仓库的独立 Chrome 扩展，用画中画浮窗展示额外 40 个快捷方式，保留 Chrome 原生新标签页。与 [方案 1 侧栏](../sidepanel/README.md)分别加载、存储和测试。
+本仓库的独立 Chrome 扩展，用画中画浮窗展示额外 40 个快捷方式，保留 Chrome 原生新标签页。与 [方案 1 侧栏](https://github.com/yukiime/MoreShortcutsForChrome-sidepanel)分别加载、存储和测试。
 
 当前版本 **0.2.0**，最低 Chrome **130**。工具栏单击启动属于实验功能：自动测试已覆盖启动、复用、身份校验、并发和失败清理，真实浏览器的单击启动与窗口焦点验收尚未完成。
+
+## 开发现状备忘
+
+这部分是留给自己后续开发时查阅的记录，避免忘记方案 3 尚未解决的问题。0.2.0 的单击启动、跨应用焦点和完整恢复还需要实测；92 项自动测试已通过，桌面可见效果要另外核对。
+
+| 缺点或未完成项 | 实际影响 |
+| --- | --- |
+| 窗口层级不符合完整目标 | 尚不能让其他应用盖住浮窗，同时让浮窗盖住 Chrome；只能尝试失焦隐藏 |
+| 隐藏失败时关闭浮窗 | 会话可能丢失，回来后需再次点击工具栏，不保证无点击自动恢复 |
+| 原生窗口不能做成纯透明 | 历史实测底板仍不透明，当前版本未验证修复，不能透过整个窗口看下方内容 |
+| 工具栏单击启动未完成运行验收 | 新增的手势路径可能被浏览器拒绝，需要实测点击是否成功 |
+| 需要保留后台会话标签 | 来源标签关闭、刷新或导航会使当前浮窗或会话失效 |
+| 焦点、多窗口和桌面恢复仍待验证 | 未保证全屏、Spaces、多屏、重启或跨平台使用效果 |
+| 没有常访问二级菜单 | 不包含方案 1 的历史排名功能 |
+| 编辑方式较粗糙 | 当前在管理页编辑 JSON，没有方案 1 的逐条名称/网址编辑表单 |
+
+问题的来源、当前处理办法和后续检查项记在 [方案 3 开发备忘](docs/limitations.md)。
 
 ## 安装和启动
 
@@ -21,25 +38,21 @@
 
 清单与浮窗边界保存在此扩展自己的 `storage.local`，与方案 1 不同步。源码清单不会覆盖已保存内容。移除前可从管理页复制 JSON 备份，移除会删除本地存储。图标为离线文字，不请求远程 favicon。
 
-## 已知边界
-
-- PiP 窗口层级尚不能满足“其他应用在浮窗上方、浮窗在 Chrome 上方”的完整要求。
-- 进入普通网页或切到其他应用时尝试隐藏浮窗，无法隐藏时关闭，返回后可能需要重新启动。
-- CSS 透明不能实现整个原生 PiP 桌面窗口透明，底板仍可能不透明。
-- 隐藏、恢复、焦点、全屏和浏览器重启效果需继续运行验收，不能用 API 测试替代。
-- 后台来源标签持有浮窗，关闭它会关闭当前浮窗并重新准备来源。
+## 权限
 
 只使用 `tabs` 和 `storage` 权限。没有 debugger、host_permissions、content_scripts、scripting、新标签页替换、系统辅助程序或企业策略。诊断不记录普通网页完整地址。
 
 ## 开发
 
-从仓库根目录执行：
+本仓库可独立克隆。Node.js 22 或更新版本用于检查，Python 3 用于打包，无需 npm install。从本仓库根目录执行：
 
 ```sh
-npm test --prefix pip-shortcuts
-npm run check --prefix pip-shortcuts
-npm run build --prefix pip-shortcuts
+npm test
+npm run check
+npm run build
 npm run package
 ```
 
-最后一个命令生成包含两个方案的源码包，以及各自独立的扩展包。原始本机日志不进入 Git 和发布包。历史依据见 [设计](docs/design.md)、[实施记录](docs/improvement-plan.md)和 [计划](docs/plan.md)。
+构建输出 `build/extension/`，打包输出 `dist/source.zip` 和 `dist/extension.zip`。无需总项目的脚本或目录。源码和发布包不含原始本机日志。
+
+[总项目](https://github.com/yukiime/MoreShortcutsForChrome)保留两个方案的对照与开发历史。历史依据见 [设计](docs/design.md)、[实施记录](docs/improvement-plan.md)和 [计划](docs/plan.md)。这些记录反映当时范围，当前未完成项以 [开发备忘](docs/limitations.md)为准。

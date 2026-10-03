@@ -4,17 +4,17 @@
 
 | 文件 | 职责 |
 | --- | --- |
-| `sidepanel/extension/worker.js` | 同步注册事件监听器，初始化服务并分派消息 |
-| `sidepanel/extension/core.js` | NTP 识别、清单与网址校验、面板上下文解析 |
-| `sidepanel/extension/controller.js` | 逐标签队列、侧栏注册与隐藏、安全导航 |
-| `sidepanel/extension/entry.js` | 在用户操作回调中创建 NTP 并打开对应侧栏 |
-| `sidepanel/extension/shortcut-store.js` | 本地清单与设置、revision 冲突保护、写入队列 |
-| `sidepanel/extension/panel-service.js` | 面板消息、历史查询、上下文校验与令牌失效 |
-| `sidepanel/extension/panel-ui.js` | 编辑草稿、保存锁定、持久开关与二级菜单 |
-| `sidepanel/extension/frequent-sites.js` | 有界历史扫描和 hostname 排名 |
-| `sidepanel/extension/auto-open.js` | 自动显示队列、自有调试目标、手势桥接与清理 |
-| `sidepanel/extension/offscreen-client.js` | 隐藏文档创建与排名请求 |
-| `sidepanel/extension/offscreen.js`、`rank-worker.js` | 手势消息桥接与本地排名 Worker |
+| `extension/worker.js` | 同步注册事件监听器，初始化服务并分派消息 |
+| `extension/core.js` | NTP 识别、清单与网址校验、面板上下文解析 |
+| `extension/controller.js` | 逐标签队列、侧栏注册与隐藏、安全导航 |
+| `extension/entry.js` | 在用户操作回调中创建 NTP 并打开对应侧栏 |
+| `extension/shortcut-store.js` | 本地清单与设置、revision 冲突保护、写入队列 |
+| `extension/panel-service.js` | 面板消息、历史查询、上下文校验与令牌失效 |
+| `extension/panel-ui.js` | 编辑草稿、保存锁定、持久开关与二级菜单 |
+| `extension/frequent-sites.js` | 有界历史扫描和 hostname 排名 |
+| `extension/auto-open.js` | 自动显示队列、自有调试目标、手势桥接与清理 |
+| `extension/offscreen-client.js` | 隐藏文档创建与排名请求 |
+| `extension/offscreen.js`、`rank-worker.js` | 手势消息桥接与本地排名 Worker |
 
 后台验证每次请求的发送者身份、面板路径、活动 NTP 与明确窗口。`pendingUrl` 优先于已提交 URL，防止页面开始离开 NTP 后仍接受旧导航。
 

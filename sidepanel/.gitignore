@@ -1,0 +1,21 @@
+# Generated and local-only files
+build/
+dist/
+.local/
+validation/
+**/validation/
+**/progress.md
+.superpowers/
+*.zip
+*.log
+node_modules/
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+.npmrc
+*.pem
+*.key

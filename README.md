@@ -14,7 +14,17 @@
 | 权限 | sidePanel、tabs、storage、debugger、offscreen；可选 history | tabs、storage |
 | 运行验收 | Chrome 154 已实测原生“+”自动显示 | 单击启动与窗口焦点尚未完成运行验收 |
 
-两种实现均使用 Manifest V3 和原生 HTML/CSS/JavaScript，无 npm 依赖。建议先使用已实测的方案 1。方案 3 保留浮窗探索方向，当前窗口层级、透明底板和恢复行为存在限制，详见 [方案 3 说明](pip-shortcuts/README.md)。
+两种实现均使用 Manifest V3 和原生 HTML/CSS/JavaScript，无 npm 依赖。方案 3 保留浮窗探索方向，当前窗口层级、透明底板和恢复行为存在限制，详见 [方案 3 开发备忘](pip-shortcuts/docs/limitations.md)。
+
+## 三个公开仓库
+
+| 仓库 | 用途 |
+| --- | --- |
+| [MoreShortcutsForChrome](https://github.com/yukiime/MoreShortcutsForChrome) | 总项目：对称目录、方案对照、完整开发历史 |
+| [MoreShortcutsForChrome-sidepanel](https://github.com/yukiime/MoreShortcutsForChrome-sidepanel) | 方案 1：可独立克隆、测试、构建和打包 |
+| [MoreShortcutsForChrome-pip](https://github.com/yukiime/MoreShortcutsForChrome-pip) | 方案 3：独立浮窗原型，保留缺点和后续待办记录 |
+
+方案 3 仍不完整：窗口层级与纯透明目标未实现，隐藏失败会关闭浮窗并要求重新启动，0.2.0 单击入口和桌面恢复尚未完成运行验收。详见 [开发备忘：缺点与待办](pip-shortcuts/docs/limitations.md)。同步方式见 [仓库关系](docs/repositories.md)。
 
 ## 方案 1：安装
 
@@ -67,7 +77,7 @@ npm run build
 npm run package
 ```
 
-构建副本位于 `build/sidepanel/extension/` 与 `build/pip-shortcuts/extension/`，打包产物位于 `dist/`：
+构建副本位于 `sidepanel/build/extension/` 与 `pip-shortcuts/build/extension/`，打包产物位于 `dist/`：
 
 - `MoreShortcutsForChrome-source.zip`：可分享的两个方案的源码、测试、说明及历史文档。
 - `MoreShortcutsForChrome-sidepanel-extension.zip`：可解压加载的方案 1 扩展。
@@ -82,6 +92,6 @@ scripts/                统一构建和打包入口
 docs/                   两方案共有的发布与迁移说明
 ```
 
-`build/`、`dist/` 和 `.local/` 不进入 Git。`.local/` 仅保留原始本机验收资料、旧包和开发笔记；发布包不包含这些资料。
+各级 `build/`、`dist/` 和 `.local/` 不进入 Git。`.local/` 仅保留原始本机验收资料、旧包和开发笔记；发布包不包含这些资料。
 
 两个方案的独立说明见 [方案 1](sidepanel/README.md)和 [方案 3](pip-shortcuts/README.md)。方案 1 详细说明见 [使用与边界](sidepanel/docs/usage.md)、[架构](sidepanel/docs/architecture.md)、[验证记录](sidepanel/docs/validation.md)和 [GitHub 发布说明](docs/publishing.md)。参与开发请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。

@@ -6,23 +6,32 @@
 
 ## 安装和使用
 
-在 `chrome://extensions` 开启开发者模式，加载本目录的 **`extension/`**。点击工具栏按钮打开真实 NTP 与侧栏。需要原生“+”自动显示时，在侧栏开启“原生新标签自动显示（实验）”。
+在 `chrome://extensions` 开启开发者模式，加载本仓库的 **`extension/`**。点击工具栏按钮打开真实 NTP 与侧栏。需要原生“+”自动显示时，在侧栏开启“原生新标签自动显示（实验）”。
 
 点击“编辑”修改条目；开启“显示常访问”后按提示授予可选 history 权限。快捷方式和设置保存在本扩展自己的 storage.local，与方案 3 不自动同步。
 
-旧根目录安装的迁移与数据保留见 [迁移说明](../docs/migration.md)。不要直接移除现有扩展后重新加载，以免丢失编辑数据。
+旧根目录安装的迁移与数据保留见 [迁移说明](docs/migration.md)。不要直接移除现有扩展后重新加载，以免丢失编辑数据。
+
+## 权限和数据
+
+必需权限为 sidePanel、tabs、storage、debugger 和 offscreen；history 为可选权限，仅在用户授权后查询常访问。自动显示默认关闭，开启后只附着本扩展隐藏文档；debugger 权限本身较广，Chrome 会显示调试提示。
+
+清单和设置保存在本地，不上传历史结果或个人编辑数据。当前无一键导出全部存储，源码包不能代替个人数据备份。完整行为与限制见 [使用细节](docs/usage.md)。
 
 ## 开发
 
-从仓库根目录执行：
+本仓库可独立克隆。Node.js 22 或更新版本用于检查，Python 3 用于打包，无需 npm install。从本仓库根目录执行：
 
 ```sh
-npm test --prefix sidepanel
-npm run check --prefix sidepanel
-npm run build --prefix sidepanel
+npm test
+npm run check
+npm run build
+npm run package
 ```
 
-也可进入本目录执行 `npm test`、`npm run check` 和 `npm run build`。根目录 `npm run package` 统一生成源码和两份扩展包。
+构建输出 `build/extension/`；打包输出 `dist/source.zip` 和 `dist/extension.zip`。源码包包含说明、测试和脚本，扩展包解压后加载 `extension/`。
+
+[总项目](https://github.com/yukiime/MoreShortcutsForChrome)保留两个方案的对照与开发历史。[方案 3 独立仓库](https://github.com/yukiime/MoreShortcutsForChrome-pip)提供 PiP 实验。两份扩展的数据不自动同步。
 
 | 目录 | 内容 |
 | --- | --- |
